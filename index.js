@@ -1,6 +1,6 @@
 const { Client, MessageEmbed } = require('discord.js');
 const client = new Client();
-const token = "NzI5Nzk3MTA2NzMwMTM5ODAw.XwOPPQ.D_5wtaJdghJbGX5udqwps4nRxbw";
+
 var $ = require('jquery');
 var fetch = require('node-fetch');
 var moment = require('moment');
@@ -507,4 +507,4 @@ client.on('message', msg => {
     } 
 });
 
-client.login(token);
+client.login(process.env.DISCORD_TOKEN);
