@@ -280,7 +280,11 @@ function skills(msg) {
                                             level = level - 1
                                             sdesc += "Level: " + level + "\n"
                                             sdesc += "Progress: " + toKM(Math.round(xp-rune[level])).toString() + "/" + toKM(rune[level+1]-rune[level]).toString() +" (" + (Math.round((xp-rune[level])/(rune[level+1]-rune[level])*100000)/1000) + "%)\n"
-                                            sdesc += Math.round(xp/75400*10000)/100 + "% to level 25\n"
+                                            if (Math.round(xp/94450*10000)/100 > 100){
+                                                sdesc += "MAX LEVEL ACHIEVED\n"
+                                            }else{
+                                                sdesc += Math.round(xp/94450*10000)/100 + "% to level 25\n"
+                                            }
                                             embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
                                         }else{
                                             sdesc = ""
@@ -292,7 +296,11 @@ function skills(msg) {
                                             level = level - 1
                                             sdesc += "Level: " + level + "\n"
                                             sdesc += "Progress: " + toKM(Math.round(xp-skillValues[level])).toString() + "/" + toKM(skillValues[level+1]-skillValues[level]).toString() +" (" + (Math.round((xp-skillValues[level])/(skillValues[level+1]-skillValues[level])*100000)/1000) + "%)\n"
-                                            sdesc += Math.round(xp/55172425*10000)/100 + "% to level 50\n"
+                                            if (Math.round(xp/55172425*10000)/100 > 100){
+                                                sdesc += "MAX LEVEL ACHIEVED\n"
+                                            }else{
+                                                sdesc += Math.round(xp/55172425*10000)/100 + "% to level 50\n"
+                                            }
                                             embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
                                         }
                                     }
