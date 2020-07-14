@@ -1,6 +1,16 @@
+const express = require('express');
+const app = express();
+const port = 3000;
+
+app.get('/', (req, res) => res.send('Hello World!'));
+
+app.listen(port, () => console.log(`Example app listening at http://localhost:${port}`));
+
+
+
 const { Client, MessageEmbed } = require('discord.js');
 const client = new Client();
-const token = "NzI5Nzk3MTA2NzMwMTM5ODAw.XwOPPQ.D_5wtaJdghJbGX5udqwps4nRxbw";
+
 var $ = require('jquery');
 var fetch = require('node-fetch');
 var moment = require('moment');
@@ -16,6 +26,9 @@ var toKM = function(number) {
         return Math.round(number/1)/1000 + "K"
     }
     return number
+}
+function getRandomInt(max) {
+    return Math.floor(Math.random() * Math.floor(max));
 }
 var kj = []
 var keys = []
@@ -113,11 +126,14 @@ function getTime(path) {
         rt.open("GET", "https://hypixel-api.inventivetalent.org/api/skyblock/" + paths[i], false);
         rt.responseType = "json"
         rt.onload = function() {
-            
-            data = JSON.parse(rt.responseText)
-            //console.log(data)
-            //console.log(data["estimate"])
-            timers[i] = data["estimate"]
+            try{
+              data = JSON.parse(rt.responseText)
+              //console.log(data)
+              //console.log(data["estimate"])
+              timers[i] = data["estimate"]
+            } catch (err) {
+              console.log(err)
+            }
 
         }
         rt.send(null);
@@ -247,8 +263,12 @@ function skills(msg) {
                     var status = r.status;
                     if (status === 200) {
                         //console.log(request.responseText);
-                        uuid = JSON.parse(r.responseText).id;
-                        console.log(uuid)
+                        try{
+                          uuid = JSON.parse(r.responseText).id;
+                          console.log(uuid)
+                        } catch (err) {
+                          console.log(err)
+                        }
                         var rt = new XMLHttpRequest();
                         rt.open("GET", "https://api.hypixel.net/skyblock/profile?key=c7201cc5-0067-4f13-bf50-966eff7898e8&profile=" + profileID, true);
                         rt.responseType = 'json';
@@ -260,8 +280,13 @@ function skills(msg) {
                                 const embed = new MessageEmbed()
                                 .setTitle(args[1] + "'s skills:")
                                 .setColor(0x00ffff);
-
-                                member = JSON.parse(rt.responseText)["profile"]["members"][uuid];
+                                var member;
+                                try{
+                                  member = JSON.parse(rt.responseText)["profile"]["members"][uuid];
+                                } catch (err) {
+                                  console.log(err);
+                                  return
+                                }
                                 var skillValues = [0,50,175,375,675,1175,1925,2925,4425,6425,9925,14925,22425,32425,47425,67425,97425,147425,222425,322425,522425,822425,1222425,1722425,2322425,3022425,3822425,4722425,4722425,6822425,8022425,9322425,10722425,12222425,13822425,15522425,17322425,19222425,21222425,23322425,25522425,27822425,30222425,32722425,35322425,38072425,40972425,44072425,47472425,51172425,55172425,Infinity]
                                 var rune = [0,50,150,275,435,635,885,1200,1600,2100,2725,3510,4510,5760,7325,9325,11825,14950,18950,23950,30200,38050,47850,60100,75400,94450,Infinity]
                                 var sdesc = ""
@@ -280,7 +305,11 @@ function skills(msg) {
                                             level = level - 1
                                             sdesc += "Level: " + level + "\n"
                                             sdesc += "Progress: " + toKM(Math.round(xp-rune[level])).toString() + "/" + toKM(rune[level+1]-rune[level]).toString() +" (" + (Math.round((xp-rune[level])/(rune[level+1]-rune[level])*100000)/1000) + "%)\n"
-                                            sdesc += Math.round(xp/75400*10000)/100 + "% to level 25\n"
+                                            if (Math.round(xp/94450*10000)/100 > 100){
+                                                sdesc += "MAX LEVEL ACHIEVED\n"
+                                            }else{
+                                                sdesc += Math.round(xp/94450*10000)/100 + "% to level 25\n"
+                                            }
                                             embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
                                         }else{
                                             sdesc = ""
@@ -292,7 +321,11 @@ function skills(msg) {
                                             level = level - 1
                                             sdesc += "Level: " + level + "\n"
                                             sdesc += "Progress: " + toKM(Math.round(xp-skillValues[level])).toString() + "/" + toKM(skillValues[level+1]-skillValues[level]).toString() +" (" + (Math.round((xp-skillValues[level])/(skillValues[level+1]-skillValues[level])*100000)/1000) + "%)\n"
-                                            sdesc += Math.round(xp/55172425*10000)/100 + "% to level 50\n"
+                                            if (Math.round(xp/55172425*10000)/100 > 100){
+                                                sdesc += "MAX LEVEL ACHIEVED\n"
+                                            }else{
+                                                sdesc += Math.round(xp/55172425*10000)/100 + "% to level 50\n"
+                                            }
                                             embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
                                         }
                                     }
@@ -404,8 +437,12 @@ function findKeys(){
             if (status === 200) {
                 
                 
-                json = JSON.parse(rt.responseText);
-                iterate(json, "")
+                try{
+                  json = JSON.parse(rt.responseText);
+                  iterate(json, "")
+                } catch (err) {
+                  console.log(err)
+                }
             } else {
                 
             }
@@ -488,6 +525,9 @@ client.on('ready', () => {
     }, 60000);
 });
 
+var testCommandMessages = ["is bipolar", "gae", ", 15 seconds could ping you 15 times in discord"];
+
+
 client.on('message', msg => {
     if (msg.channel.type == "dm" || msg.channel.name == "bot") {
         if (msg.content.startsWith("=skills")) {
@@ -500,11 +540,18 @@ client.on('message', msg => {
             profiles(msg)
         }
         if (msg.content.startsWith("=test")) {
-            msg.channel.bulkDelete(1)
-            msg.channel.send("<@" + msg.author + "> is bipolar")
+            //msg.channel.bulkDelete(1)
+            var randomNumber = getRandomInt(3)
+            msg.channel.send("<@" + msg.author + "> " + testCommandMessages[randomNumber])
+            if (randomNumber == 2) {
+                for(var i = 0; i < 14; i ++) {
+                    msg.channel.send("<@" + msg.author + "> " + testCommandMessages[randomNumber])
+                }
+
+            }
 
         }
     } 
 });
 
-client.login(token);
+client.login(process.env.DISCORD_TOKEN);
