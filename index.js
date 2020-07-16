@@ -6,14 +6,18 @@ app.get('/', (req, res) => res.send('Hello World!'));
 
 app.listen(port, () => console.log(`Example app listening at http://localhost:${port}`));
 
-
-
 const { Client, MessageEmbed } = require('discord.js');
 const client = new Client();
 
+var upC = ""
 var $ = require('jquery');
 var fetch = require('node-fetch');
 var moment = require('moment');
+const fs = require('fs');
+const path = require('path');
+
+var key = process.env.HYPIXEL_API_KEY
+
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 var toKM = function(number) {
     if (number == Infinity) {
@@ -30,6 +34,16 @@ var toKM = function(number) {
 function getRandomInt(max) {
     return Math.floor(Math.random() * Math.floor(max));
 }
+function getCurPSTDate(){
+  var d = new Date();
+  var localTime = d.getTime();
+  var localOffset = d.getTimezoneOffset() * 60000;
+  var utc = localTime + localOffset;
+  var offset = -7;   
+  var currentTime = utc + (3600000*offset);
+  var nd = new Date(currentTime)
+  return ("[" + nd.getFullYear() + "-" + (nd.getMonth() + 1) + "-" + nd.getDate() + "-" + nd.getHours() + ":" + nd.getMinutes() + ":" + nd.getSeconds() + "] ")
+}
 var kj = []
 var keys = []
 var kp = [["c2189a914ed846b9a137ed92cec5257f","c2189a914ed846b9a137ed92cec5257f"],["dae29cb637bb4193a737aaef10315b72","b305db79094d4e828d7f500f0d82fac2"],["dae29cb637bb4193a737aaef10315b72","724c64a2fc8b4842852b6b4c2c6ef241"],["7f058ec852f44cfc97b46166ababac70","e1ed1823b443477d96b4281b194e17ab"],["672ef79b4d0a4805bc529d1ae44bc26b","672ef79b4d0a4805bc529d1ae44bc26b"]]
@@ -37,8 +51,21 @@ var kp = [["c2189a914ed846b9a137ed92cec5257f","c2189a914ed846b9a137ed92cec5257f"
 function iterate(obj, stack) {
     for (var property in obj) {
         if (obj.hasOwnProperty(property)) {
+          // if (property == "tutorial"){
+          //   console.log(stack + '.' + property + ": " + JSON.stringify(obj[property]))
+          //   console.log(typeof obj[property])
+          //   console.log(Array.isArray(obj[property]))
+          // }
             if (typeof obj[property] == "object") {
+              if (Array.isArray(obj[property])) {
+                obj[property].forEach(function (item, index) {
+                  if (!keys.includes(item)){
+                    keys.push(item)
+                  }
+                });
+              }else{
                 iterate(obj[property], stack + '.' + property);
+              }
             } else {
                 if (isNaN(property) && !keys.includes(property)){
                     keys.push(property)
@@ -139,24 +166,37 @@ function getTime(path) {
         rt.send(null);
     }     
 }
+var logFileName = getCurPSTDate().replace(/:/gi,"_").replace("[","").slice(0,-2) + ".txt"
+console.log("saving files to: " + logFileName)
+var logger = fs.createWriteStream('logs/' + logFileName, {
+  flags: 'a'
+})
+logger.write(getCurPSTDate() + 'saving files to: ' + logFileName + '\n')
 
-var fs = require('fs'),
-    path = require('path'),    
-    filePath = path.join(__dirname, 'newFields.txt');
 
-fs.readFile(filePath, {encoding: 'utf-8'}, function(err,data){
+
+fs.readFile(__dirname + '/newFields.txt', {encoding: 'utf-8'}, function(err,data){
     if (!err) {
-        //console.log('received data: ' + data);
         kj = data.split("\n")
-        console.log(kj)
     } else {
         console.log(err);
+        logger.write(getCurPSTDate() + 'error reading newFields.txt ' + err + '\n')
+    }
+});
+
+fs.readFile(__dirname + '/lastUpdateCode.txt', {encoding: 'utf-8'}, function(err,data){
+    if (!err) {
+      upC = data.replace(/(\r\n|\n|\r)/gm,"")
+    } else {
+      console.log(err);
+      logger.write(getCurPSTDate() + 'error reading lastUpdateCode.txt ' + err + '\n')
     }
 });
 var commands = [["=help","Lists commands"],["=skills <ign> <profile>", "Shows the skills of a player in a profile"],["=profiles <ign>", "Lists the profiles of a player"],["=test", "Test command run at your own risk"]]
 
 function skills(msg) {
     console.log("Skills called by <@" + msg.author + ">")
+    logger.write(getCurPSTDate() + "Skills called by <@" + msg.author + ">" + '\n')
     var profiles = [];
     var args = msg.content.split(" ");
       if (args.length < 3) {
@@ -174,7 +214,6 @@ function skills(msg) {
             request.open("GET", "https://sky.lea.moe/api/" + args[1] + "/profiles?html", false);
             
             request.onload = function() {
-                console.log("a")
                     if (request.responseText == "Something went wrong") {
                         const embed = new MessageEmbed()
                         .setTitle("Invalid Username!")
@@ -183,23 +222,18 @@ function skills(msg) {
                         msg.channel.send(embed);
                         return
                     }
-                    console.log(request.responseText)
                     var d = request.responseText.split("<tr>")
-
-                    console.log(d)
                     for (i = 0; i < d.length; i++) { 
                         d[i] = d[i].split("</td><td>")
                         if (d[i][1] != undefined) {
                             profiles.push(d[i][1])
                         }
                     }
-                    console.log(profiles);
                     var desc = "Try: " + msg.content + " <profile>\n\n"
                     desc = desc + "**" + args[1] + "'s profiles:**\n"
                     for (i=0; i < profiles.length; i++) {
                         desc += profiles[i] + "\n"
                     }
-                    console.log("h")
                     const embed = new MessageEmbed()
                     .setTitle("Missing profile argument!")
                     .setColor(0xff0000)
@@ -228,10 +262,8 @@ function skills(msg) {
                 msg.channel.send(embed);
                 return
             }
-            console.log(request.responseText)
             var d = request.responseText.split("<tr>")
 
-            console.log(d)
             for (i = 0; i < d.length; i++) { 
                 d[i] = d[i].split("</td><td>")
                 if (d[i][1] != undefined) {
@@ -241,7 +273,6 @@ function skills(msg) {
                     }
                 }
             }
-            console.log("PID: " + profileID)
             if (profileID == ""){
                 var desc = "Try: =skills " + args[1] + " <profile>\n\n"
                 desc = desc + "**" + args[1] + "'s profiles:**\n"
@@ -262,21 +293,18 @@ function skills(msg) {
                 r.onload = function() {
                     var status = r.status;
                     if (status === 200) {
-                        //console.log(request.responseText);
                         try{
                           uuid = JSON.parse(r.responseText).id;
-                          console.log(uuid)
                         } catch (err) {
-                          console.log(err)
+                          logger.write(getCurPSTDate() + "Error parsing JSON!\n")
                         }
                         var rt = new XMLHttpRequest();
-                        rt.open("GET", "https://api.hypixel.net/skyblock/profile?key=c7201cc5-0067-4f13-bf50-966eff7898e8&profile=" + profileID, true);
+                        rt.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + key + "&profile=" + profileID, true);
                         rt.responseType = 'json';
                         var data = {};
                         rt.onload = function() {
                             var status = rt.status;
                             if (status === 200) {
-                                //console.log(request.responseText);
                                 const embed = new MessageEmbed()
                                 .setTitle(args[1] + "'s skills:")
                                 .setColor(0x00ffff);
@@ -285,13 +313,13 @@ function skills(msg) {
                                   member = JSON.parse(rt.responseText)["profile"]["members"][uuid];
                                 } catch (err) {
                                   console.log(err);
+                                  logger.write(getCurPSTDate() + "Error parsing JSON!\n")
                                   return
                                 }
                                 var skillValues = [0,50,175,375,675,1175,1925,2925,4425,6425,9925,14925,22425,32425,47425,67425,97425,147425,222425,322425,522425,822425,1222425,1722425,2322425,3022425,3822425,4722425,4722425,6822425,8022425,9322425,10722425,12222425,13822425,15522425,17322425,19222425,21222425,23322425,25522425,27822425,30222425,32722425,35322425,38072425,40972425,44072425,47472425,51172425,55172425,Infinity]
                                 var rune = [0,50,150,275,435,635,885,1200,1600,2100,2725,3510,4510,5760,7325,9325,11825,14950,18950,23950,30200,38050,47850,60100,75400,94450,Infinity]
                                 var sdesc = ""
                                 var count = 0;
-                                console.log(member["experience_skill_combat"])
                                 for (var k in member) {
                                     if (k.startsWith("experience_skill_")) {
                                         count ++;
@@ -341,6 +369,7 @@ function skills(msg) {
                                 return
                             } else {
                                 console.log("Error in skills called by <@" + msg.author + "> sb api")
+                                logger.write(getCurPSTDate() + "Error in skills called by <@" + msg.author + "> sb api\n")
                                 const embed = new MessageEmbed()
                                 .setTitle("An error occured!")
                                 .setColor(0xff0000)
@@ -352,6 +381,7 @@ function skills(msg) {
                         rt.send(null);
                     } else {
                         console.log("Error in skills called by <@" + msg.author + "> mojang api")
+                        logger.write(getCurPSTDate() + "Error in skills called by <@" + msg.author + "> mojang api\n")
                         const embed = new MessageEmbed()
                         .setTitle("An error occured!")
                         .setColor(0xff0000)
@@ -368,9 +398,11 @@ function skills(msg) {
     }
     request.send(null);
     console.log("Skills finished by <@" + msg.author + ">")
+    logger.write(getCurPSTDate() + "Skills finished by <@" + msg.author + ">\n")
 }
 function help(msg) {
     console.log("Help called by <@" + msg.author + ">")
+    logger.write(getCurPSTDate() + "Help called by <@" + msg.author + ">\n")
     const embed = new MessageEmbed()
     .setTitle("Commands")
     .setColor(0x00ffff);
@@ -379,9 +411,11 @@ function help(msg) {
     }
     msg.channel.send(embed);
     console.log("Help finished by <@" + msg.author + ">")
+    logger.write(getCurPSTDate() + "Help finished by <@" + msg.author + ">\n")
 }
 function profiles(msg) {
     console.log("Profiles called by <@" + msg.author + ">")
+    logger.write(getCurPSTDate() + "Profiles finished by <@" + msg.author + ">\n")
     var profiles = [];
     var args = msg.content.split(" ");
     var request = new XMLHttpRequest();
@@ -397,17 +431,14 @@ function profiles(msg) {
                 msg.channel.send(embed);
                 return
             }
-            console.log(request.responseText)
             var d = request.responseText.split("<tr>")
 
-            console.log(d)
             for (i = 0; i < d.length; i++) { 
                  d[i] = d[i].split("</td><td>")
                 if (d[i][1] != undefined) {
                     profiles.push(d[i][1])
                 }
             }
-            console.log(profiles);
             var desc = ""
             for (i=0; i < profiles.length; i++) {
                 desc += profiles[i] + "\n"
@@ -421,15 +452,49 @@ function profiles(msg) {
         }
     };
     console.log("Profiles finished by <@" + msg.author + ">")
+    logger.write(getCurPSTDate() + "Profiles finished by <@" + msg.author + ">\n")
+}
+function findUpdate(){
+  console.log("Checking for an update...")
+  logger.write(getCurPSTDate() + "Checking for an update...\n")
+  var rt = new XMLHttpRequest();
+  rt.open("GET", "https://api.hypixel.net/skyblock/news?key=" + key, false);
+  rt.responseType = 'json';
+  rt.onload = function() {
+      var status = rt.status;
+      if (status === 200) {
+          try{
+            json = JSON.parse(rt.responseText);
+            if (json["success"] == true) {
+              var newLink = json["items"][0]["link"];
+              if (newLink != upC) {
+                fs.writeFile('lastUpdateCode.txt', newLink, function (err) {
+                    if (err) throw err;
+                  });
+                upC = newLink;
+                client.channels.cache.get('729856965471109130').send(upC);
+              }
+            }
+          } catch (err) {
+            console.log(err)
+            logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+          }
+      } else {
+          
+      }
+  };
+  rt.send(null);
 }
 function findKeys(){
-    console.log("checking keys")
+    console.log("Checking API keys...")
+    logger.write(getCurPSTDate() + "Checking API keys...\n")
     kj = []
     var it = 0
     for (it = 0; it < kp.length; it ++) {
-        console.log("\nchecking " + it)
+        console.log("Checking Profile #" + it)
+        logger.write(getCurPSTDate() + "Checking Profile #" + it + "\n")
         var rt = new XMLHttpRequest();
-        rt.open("GET", "https://api.hypixel.net/skyblock/profile?key=c7201cc5-0067-4f13-bf50-966eff7898e8&profile=" + kp[it][0], false);
+        rt.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + key + "&profile=" + kp[it][0], false);
         rt.responseType = 'json';
         var data = {};
         rt.onload = function() {
@@ -442,6 +507,7 @@ function findKeys(){
                   iterate(json, "")
                 } catch (err) {
                   console.log(err)
+                  logger.write(getCurPSTDate() + "Error parsing JSON!\n")
                 }
             } else {
                 
@@ -454,23 +520,21 @@ function findKeys(){
     .setTitle("Something Changed!")
     .setColor(0x00ff00)
     var out = []
-    fs.readFile(filePath, {encoding: 'utf-8'}, function(err,data){
+    fs.readFile(__dirname + '/newFields.txt', {encoding: 'utf-8'}, function(err,data){
         if (!err) {
-            //console.log('received data: ' + data);
             kj = data.split("\n")
             dif = arr_diff(keys, kj)
             dif2 = arr_diff(kj, keys)
             console.log(dif.length)
             console.log(dif2.length)
-            //console.log(dif)
-            //console.log(dif2)
 
             if (dif.length != 0 || dif2.length != 0) {
-                console.log("changed")
+                console.log("Something was changed: +" + dif + ", -" + dif2)
+                logger.write(getCurPSTDate() + "Something was changed: +" + dif + ", -" + dif2 + "\n")
                 fs.writeFile('newFields.txt', keys.join("\n"), function (err) {
                     if (err) throw err;
-                    console.log('Saved!');
-                    
+                    console.log('Saved to file!');
+                    logger.write(getCurPSTDate() + "Saved to file!n")
                     });
                 if (dif.length != 0) {
                     tg += "**Added:**\n"
@@ -497,6 +561,7 @@ function findKeys(){
             
         } else {
             console.log(err);
+            logger.write(getCurPSTDate() + "Error reading newFields.txt while checking keys!\n")
         }
     });
     //kj = ["a"]
@@ -508,20 +573,21 @@ client.on('ready', () => {
     channel = client.channels.cache.get('729889897485434991')
     
     console.log(`Logged in as ${client.user.tag}!`);
+    logger.write(getCurPSTDate() + `Logged in as ${client.user.tag}!` + "\n")
     client.user.setActivity("=help | created by tillvit");
-    findKeys() 
+    findKeys()
+    findUpdate() 
     setInterval(function(){ 
         findKeys() 
+        findUpdate()
     }, 120000);
     getTime()
-    console.log(timers)
     UpdateTimers()
     setInterval(function(){ 
         UpdateTimers()
     }, 5000);
     setInterval(function(){ 
         getTime()
-        //console.log(timers)
     }, 60000);
 });
 
