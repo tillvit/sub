@@ -1,9 +1,0 @@
-[2020-7-17-9:53:58] saving files to: 2020-7-17-9_53_58.txt
-[2020-7-17-9:54:0] Logged in as SB Bot#3484!
-[2020-7-17-9:54:0] Checking API keys...
-[2020-7-17-9:54:0] Checking Profile #0
-[2020-7-17-9:54:1] Checking Profile #1
-[2020-7-17-9:54:4] Checking Profile #2
-[2020-7-17-9:54:7] Checking Profile #3
-[2020-7-17-9:54:11] Checking Profile #4
-[2020-7-17-9:54:13] Checking for an update...
