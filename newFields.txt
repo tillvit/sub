@@ -242,6 +242,7 @@ deaths_deathmite
 kills_crypt_undead_valentin
 kills_dungeon_respawning_skeleton_skull
 deaths_professor
+deaths_scarf_archer
 status
 progress
 completed_at
@@ -420,6 +421,7 @@ SLIME_11
 GOLD_10
 REVENANT_5
 REVENANT_4
+REVENANT_6
 REVENANT_3
 REVENANT_2
 TARANTULA_3
@@ -746,6 +748,7 @@ SPIDER_2
 SPIDER_3
 SPIDER_4
 SPIDER_5
+ZOMBIE_9
 IRON_1
 SHEEP_3
 ICE_8
@@ -1402,17 +1405,6 @@ balance
 [object Object]
 [object Object]
 [object Object]
-[object Object]
-[object Object]
-[object Object]
-[object Object]
-[object Object]
-[object Object]
-[object Object]
-[object Object]
-[object Object]
-[object Object]
-[object Object]
 kills_magma_cube_boss
 kills_superior_dragon
 kills_young_dragon
@@ -1500,7 +1492,6 @@ OAK_10
 MUSHROOM_10
 DARK_OAK_10
 DARK_OAK_11
-REVENANT_6
 REVENANT_7
 BIRCH_9
 BIRCH_10
@@ -1515,7 +1506,6 @@ SPRUCE_8
 SPRUCE_9
 SPRUCE_10
 SPRUCE_11
-ZOMBIE_9
 CARROT_10
 CARROT_11
 TARANTULA_5
@@ -1823,7 +1813,6 @@ combat_xp
 last_killed_mob_island
 xp_on_last_follower_spawn
 spawn_timestamp
-[object Object]
 [object Object]
 [object Object]
 [object Object]
@@ -4671,6 +4660,18 @@ confirmed_timestamp
 [object Object]
 [object Object]
 [object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
 deaths_skeleton_emperor
 deaths_generator_magma_cube
 deaths_cave_spider
@@ -4683,6 +4684,101 @@ dungeon_hub_giant_mushroom_no_abilities_with_return_best_time
 deaths_zombie_soldier
 boss_collection_claimed_scarf_red_scarf
 boss_collection_claimed_scarf_scarf_thesis
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
+[object Object]
 [object Object]
 [object Object]
 [object Object]

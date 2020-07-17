@@ -1,4 +1,26 @@
+/*********************************************************
+  
+  /_/_/_  /_  /_  /_/_          skyblock
+  /_      /_  /_  /_  /_        
+  /_/_/_  /_  /_  /_/_          update
+      /_  /_  /_  /_  /_
+  /_/_/_  /_/_/_  /_/_          bot     created by tillvit
+
+*********************************************************/
+
+
+//Declare Requires
+const $ = require('jquery');
+const fetch = require('node-fetch');
+const moment = require('moment');
+const fs = require('fs');
+const path = require('path');
+const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const express = require('express');
+const { Client, MessageEmbed } = require('discord.js');
+const client = new Client();
+
+//Repl.it start
 const app = express();
 const port = 3000;
 
@@ -6,19 +28,18 @@ app.get('/', (req, res) => res.send('Hello World!'));
 
 app.listen(port, () => console.log(`Example app listening at http://localhost:${port}`));
 
-const { Client, MessageEmbed } = require('discord.js');
-const client = new Client();
-
-var upC = ""
-var $ = require('jquery');
-var fetch = require('node-fetch');
-var moment = require('moment');
-const fs = require('fs');
-const path = require('path');
-
+//Declare Globals
 var key = process.env.HYPIXEL_API_KEY
+var upC = ""
+var kj = []
+var keys = []
+var kp = [["c2189a914ed846b9a137ed92cec5257f","c2189a914ed846b9a137ed92cec5257f"],["dae29cb637bb4193a737aaef10315b72","b305db79094d4e828d7f500f0d82fac2"],["dae29cb637bb4193a737aaef10315b72","724c64a2fc8b4842852b6b4c2c6ef241"],["7f058ec852f44cfc97b46166ababac70","e1ed1823b443477d96b4281b194e17ab"],["672ef79b4d0a4805bc529d1ae44bc26b","672ef79b4d0a4805bc529d1ae44bc26b"]]
+var timerNames = ["Magma Boss", "Dark Auction", "Bank", "New Year", "Spooky Fest", "Winter Fest", "Travelling Zoo"]
+var timers = [0,0,0,0,0,0,0]
+var commands = [["=help","Lists commands"],["=skills <ign> <profile>", "Shows the skills of a player in a profile"],["=profiles <ign>", "Lists the profiles of a player"],["=test", "Test command run at your own risk"]]
+var testCommandMessages = ["is bipolar", "gae", ", 15 seconds could ping you 15 times in discord"];
 
-var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+//Helper Functions
 var toKM = function(number) {
     if (number == Infinity) {
         return number;
@@ -31,9 +52,11 @@ var toKM = function(number) {
     }
     return number
 }
+
 function getRandomInt(max) {
     return Math.floor(Math.random() * Math.floor(max));
 }
+
 function getCurPSTDate(){
   var d = new Date();
   var localTime = d.getTime();
@@ -44,10 +67,7 @@ function getCurPSTDate(){
   var nd = new Date(currentTime)
   return ("[" + nd.getFullYear() + "-" + (nd.getMonth() + 1) + "-" + nd.getDate() + "-" + nd.getHours() + ":" + nd.getMinutes() + ":" + nd.getSeconds() + "] ")
 }
-var kj = []
-var keys = []
-var kp = [["c2189a914ed846b9a137ed92cec5257f","c2189a914ed846b9a137ed92cec5257f"],["dae29cb637bb4193a737aaef10315b72","b305db79094d4e828d7f500f0d82fac2"],["dae29cb637bb4193a737aaef10315b72","724c64a2fc8b4842852b6b4c2c6ef241"],["7f058ec852f44cfc97b46166ababac70","e1ed1823b443477d96b4281b194e17ab"],["672ef79b4d0a4805bc529d1ae44bc26b","672ef79b4d0a4805bc529d1ae44bc26b"]]
-//var kp = [["672ef79b4d0a4805bc529d1ae44bc26b","672ef79b4d0a4805bc529d1ae44bc26b"]]
+
 function iterate(obj, stack) {
     for (var property in obj) {
         if (obj.hasOwnProperty(property)) {
@@ -74,6 +94,7 @@ function iterate(obj, stack) {
         }
     }
 }
+
 function arr_diff (a1, a2) {
 
     var a = [], diff = [];
@@ -98,6 +119,7 @@ function arr_diff (a1, a2) {
 
     return diff;
 }
+
 function ConvertMinutes(num){
     if (num < 0) {
         return ("NOW")
@@ -124,9 +146,8 @@ function ConvertMinutes(num){
     }else{
         return(d+":" + h + ":"+m+ ":"+s);
     }
-    
-  
 }
+
 function UpdateTimers(){
     let now = Date.now();
     var m = moment.duration(timers[0] - now).asMinutes();
@@ -143,8 +164,7 @@ function UpdateTimers(){
         m.edit(embed);
     });
 }
-var timerNames = ["Magma Boss", "Dark Auction", "Bank", "New Year", "Spooky Fest", "Winter Fest", "Travelling Zoo"]
-var timers = [0,0,0,0,0,0,0]
+
 function getTime(path) {
     var paths = ["bosstimer/magma/estimatedSpawn","darkauction/estimate","bank/interest/estimate","newyear/estimate","spookyFestival/estimate","winter/estimate","zoo/estimate"]
     for (var i = 0; i < paths.length; i ++){
@@ -166,240 +186,308 @@ function getTime(path) {
         rt.send(null);
     }     
 }
-var logFileName = getCurPSTDate().replace(/:/gi,"_").replace("[","").slice(0,-2) + ".txt"
-console.log("saving files to: " + logFileName)
-var logger = fs.createWriteStream('logs/' + logFileName, {
-  flags: 'a'
-})
-logger.write(getCurPSTDate() + 'saving files to: ' + logFileName + '\n')
 
-
-
-fs.readFile(__dirname + '/newFields.txt', {encoding: 'utf-8'}, function(err,data){
-    if (!err) {
-        kj = data.split("\n")
-    } else {
-        console.log(err);
-        logger.write(getCurPSTDate() + 'error reading newFields.txt ' + err + '\n')
-    }
-});
-
-fs.readFile(__dirname + '/lastUpdateCode.txt', {encoding: 'utf-8'}, function(err,data){
-    if (!err) {
-      upC = data.replace(/(\r\n|\n|\r)/gm,"")
-    } else {
+function getUUID(ign) {
+  var r = new XMLHttpRequest();
+  var uuid = ""
+  r.open("GET", "https://api.mojang.com/users/profiles/minecraft/" + ign, false);
+  r.responseType = "json";
+  r.onload = function () {
+    try {
+      json = JSON.parse(r.responseText)
+      uuid = json.id;
+    } catch (err) {
       console.log(err);
-      logger.write(getCurPSTDate() + 'error reading lastUpdateCode.txt ' + err + '\n')
+      logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+      return ""
     }
-});
-var commands = [["=help","Lists commands"],["=skills <ign> <profile>", "Shows the skills of a player in a profile"],["=profiles <ign>", "Lists the profiles of a player"],["=test", "Test command run at your own risk"]]
+  };
+  r.send(null)
+  return uuid;
+}
 
+//Bot Functions
 function skills(msg) {
-    console.log("Skills called by <@" + msg.author + ">")
-    logger.write(getCurPSTDate() + "Skills called by <@" + msg.author + ">" + '\n')
-    var profiles = [];
-    var args = msg.content.split(" ");
-      if (args.length < 3) {
-        if (args.length == 1) {
-            const embed = new MessageEmbed()
-            .setTitle("Missing player and profile argument!")
-            .setColor(0xff0000)
-            .setDescription("Try: " + msg.content + " <ign> <profile>");
-            msg.channel.send(embed);
-            return
-        }
-        if (args.length == 2) {
-            
-            var request = new XMLHttpRequest();
-            request.open("GET", "https://sky.lea.moe/api/" + args[1] + "/profiles?html", false);
-            
-            request.onload = function() {
-                    if (request.responseText == "Something went wrong") {
-                        const embed = new MessageEmbed()
-                        .setTitle("Invalid Username!")
-                        .setColor(0xff0000)
-                        
-                        msg.channel.send(embed);
-                        return
-                    }
-                    var d = request.responseText.split("<tr>")
-                    for (i = 0; i < d.length; i++) { 
-                        d[i] = d[i].split("</td><td>")
-                        if (d[i][1] != undefined) {
-                            profiles.push(d[i][1])
-                        }
-                    }
-                    var desc = "Try: " + msg.content + " <profile>\n\n"
-                    desc = desc + "**" + args[1] + "'s profiles:**\n"
-                    for (i=0; i < profiles.length; i++) {
-                        desc += profiles[i] + "\n"
-                    }
-                    const embed = new MessageEmbed()
-                    .setTitle("Missing profile argument!")
-                    .setColor(0xff0000)
-                    .setDescription(desc);
-                    msg.channel.send(embed);
-                    return
-                
-            };
-            request.send(null);
-            
-        }
-    }
-    var profileID = ""
-    var profiles = []
-    var request = new XMLHttpRequest();
-    request.open("GET", "https://sky.lea.moe/api/" + args[1] + "/profiles?html", false);
-    
-    request.onload = function() {
-
-
+  var hasFailed = false;
+  console.log("Skills called by <@" + msg.author + ">")
+  logger.write(getCurPSTDate() + "Skills called by <@" + msg.author + ">" + '\n')
+  var profiles = [];
+  var args = msg.content.split(" ");
+    if (args.length < 3) {
+      if (args.length == 1) {
+          const embed = new MessageEmbed()
+          .setTitle("Missing player and profile argument!")
+          .setColor(0xff0000)
+          .setDescription("Try: " + msg.content + " <ign> <profile>");
+          msg.channel.send(embed);
+          return
+      }
+      if (args.length == 2) {
+          
+          var request = new XMLHttpRequest();
+          request.open("GET", "https://sky.lea.moe/api/" + args[1] + "/profiles?html", false);
+          
+          request.onload = function() {
             if (request.responseText == "Something went wrong") {
                 const embed = new MessageEmbed()
                 .setTitle("Invalid Username!")
                 .setColor(0xff0000)
-                
                 msg.channel.send(embed);
+                hasFailed = true
                 return
             }
             var d = request.responseText.split("<tr>")
-
             for (i = 0; i < d.length; i++) { 
                 d[i] = d[i].split("</td><td>")
                 if (d[i][1] != undefined) {
-                    profiles.push(d[i][1])
-                    if (d[i][1] == args[2].charAt(0).toUpperCase() + args[2].slice(1)) {
-                        profileID = d[i][0].substring(4)
-                    }
+                  var newItem = [d[i][0].substring(4), d[i][1],0]
+                  profiles.push(newItem)
                 }
             }
-            if (profileID == ""){
-                var desc = "Try: =skills " + args[1] + " <profile>\n\n"
-                desc = desc + "**" + args[1] + "'s profiles:**\n"
-                for (i=0; i < profiles.length; i++) {
-                    desc += profiles[i] + "\n"
-                }
+          };
+          request.send(null);
+
+          if (hasFailed){
+            console.log("Skills finished by <@" + msg.author + ">")
+            logger.write(getCurPSTDate() + "Skills finished by <@" + msg.author + ">\n")
+            return
+          }
+          
+          var uuid = getUUID(args[1])
+          if (uuid == "") {
+            const embed = new MessageEmbed()
+            .setTitle("An error occured!")
+            .setColor(0xff0000)
+            .setDescription("Try again later!");
+            msg.channel.send(embed);
+            hasFailed = true
+          }
+
+          if (hasFailed){
+            console.log("Skills failed by <@" + msg.author + ">")
+            logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
+            return
+          }
+
+          for (i = 0; i < profiles.length; i++) {
+            request = new XMLHttpRequest();
+            request.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + profiles[i][0], false);
+            request.responseType = 'json';
+            request.onload = function() {
+              try{
+                profiles[i][2] = JSON.parse(request.responseText)["profile"]["members"][uuid]["last_save"];
+              } catch (err) {
+                console.log(err)
+                logger.write(getCurPSTDate() + "Error parsing JSON!\n")
                 const embed = new MessageEmbed()
-                .setTitle("Profile doesn't exist!")
+                .setTitle("An error occured!")
                 .setColor(0xff0000)
-                .setDescription(desc);
+                .setDescription("Try again later!");
                 msg.channel.send(embed);
+                hasFailed = true
                 return
-            }else{
-                var r = new XMLHttpRequest();
-                r.open("GET", "https://api.mojang.com/users/profiles/minecraft/" + args[1], true);
-                r.responseType = 'json';
-                var uuid = ""
-                r.onload = function() {
-                    var status = r.status;
-                    if (status === 200) {
-                        try{
-                          uuid = JSON.parse(r.responseText).id;
-                        } catch (err) {
-                          logger.write(getCurPSTDate() + "Error parsing JSON!\n")
-                        }
-                        var rt = new XMLHttpRequest();
-                        rt.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + key + "&profile=" + profileID, true);
-                        rt.responseType = 'json';
-                        var data = {};
-                        rt.onload = function() {
-                            var status = rt.status;
-                            if (status === 200) {
-                                const embed = new MessageEmbed()
-                                .setTitle(args[1] + "'s skills:")
-                                .setColor(0x00ffff);
-                                var member;
-                                try{
-                                  member = JSON.parse(rt.responseText)["profile"]["members"][uuid];
-                                } catch (err) {
-                                  console.log(err);
-                                  logger.write(getCurPSTDate() + "Error parsing JSON!\n")
-                                  return
-                                }
-                                var skillValues = [0,50,175,375,675,1175,1925,2925,4425,6425,9925,14925,22425,32425,47425,67425,97425,147425,222425,322425,522425,822425,1222425,1722425,2322425,3022425,3822425,4722425,4722425,6822425,8022425,9322425,10722425,12222425,13822425,15522425,17322425,19222425,21222425,23322425,25522425,27822425,30222425,32722425,35322425,38072425,40972425,44072425,47472425,51172425,55172425,Infinity]
-                                var rune = [0,50,150,275,435,635,885,1200,1600,2100,2725,3510,4510,5760,7325,9325,11825,14950,18950,23950,30200,38050,47850,60100,75400,94450,Infinity]
-                                var sdesc = ""
-                                var count = 0;
-                                for (var k in member) {
-                                    if (k.startsWith("experience_skill_")) {
-                                        count ++;
-                                        if (k == "experience_skill_runecrafting"){
-                                            sdesc = ""
-                                            var xp = member[k]
-                                            var level = 0
-                                            while (rune[level] < xp) {
-                                                level = level + 1;
-                                            }
-                                            level = level - 1
-                                            sdesc += "Level: " + level + "\n"
-                                            sdesc += "Progress: " + toKM(Math.round(xp-rune[level])).toString() + "/" + toKM(rune[level+1]-rune[level]).toString() +" (" + (Math.round((xp-rune[level])/(rune[level+1]-rune[level])*100000)/1000) + "%)\n"
-                                            if (Math.round(xp/94450*10000)/100 > 100){
-                                                sdesc += "MAX LEVEL ACHIEVED\n"
-                                            }else{
-                                                sdesc += Math.round(xp/94450*10000)/100 + "% to level 25\n"
-                                            }
-                                            embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
-                                        }else{
-                                            sdesc = ""
-                                            var xp = member[k]
-                                            var level = 0
-                                            while (skillValues[level] < xp) {
-                                                level = level + 1;
-                                            }
-                                            level = level - 1
-                                            sdesc += "Level: " + level + "\n"
-                                            sdesc += "Progress: " + toKM(Math.round(xp-skillValues[level])).toString() + "/" + toKM(skillValues[level+1]-skillValues[level]).toString() +" (" + (Math.round((xp-skillValues[level])/(skillValues[level+1]-skillValues[level])*100000)/1000) + "%)\n"
-                                            if (Math.round(xp/55172425*10000)/100 > 100){
-                                                sdesc += "MAX LEVEL ACHIEVED\n"
-                                            }else{
-                                                sdesc += Math.round(xp/55172425*10000)/100 + "% to level 50\n"
-                                            }
-                                            embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
-                                        }
-                                    }
-                                }
-
-
-                                
-                                if (count == 0) {
-                                    embed.setTitle(args[1] + "'s Skills API is disabled!")
-                                    .setColor(0xff0000);
-                                }
-                                msg.channel.send(embed);
-                                return
-                            } else {
-                                console.log("Error in skills called by <@" + msg.author + "> sb api")
-                                logger.write(getCurPSTDate() + "Error in skills called by <@" + msg.author + "> sb api\n")
-                                const embed = new MessageEmbed()
-                                .setTitle("An error occured!")
-                                .setColor(0xff0000)
-                                .setDescription("Try again later");
-                                msg.channel.send(embed);
-                                return
-                            }
-                        };
-                        rt.send(null);
-                    } else {
-                        console.log("Error in skills called by <@" + msg.author + "> mojang api")
-                        logger.write(getCurPSTDate() + "Error in skills called by <@" + msg.author + "> mojang api\n")
-                        const embed = new MessageEmbed()
-                        .setTitle("An error occured!")
-                        .setColor(0xff0000)
-                        .setDescription("Try again later");
-                        msg.channel.send(embed);
-                        return
-                    }
-                };
-                r.send(null);
-                
-            }
-            
-        
-    }
-    request.send(null);
+              }
+            };
+            request.send(null);
+          }
+          if (hasFailed){
+            console.log("Skills failed by <@" + msg.author + ">")
+            logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
+            return
+          }
+          profiles.sort(function(a,b){
+              return b[2] - a[2];
+          });
+          var desc = "Try: " + msg.content + " <profile>\n\n"
+          desc = desc + "**" + args[1] + "'s profiles:**\n"
+          desc = desc + "*Sorted by last played*\n"
+          for (i=0; i < profiles.length; i++) {
+              desc += profiles[i][1] + "\n"
+          }
+          const embed = new MessageEmbed()
+          .setTitle("Missing profile argument!")
+          .setColor(0xff0000)
+          .setDescription(desc);
+          msg.channel.send(embed);
+          return
+      }
+  }
+  var profileID = ""
+  var profiles = []
+  var request = new XMLHttpRequest();
+  request.open("GET", "https://sky.lea.moe/api/" + args[1] + "/profiles?html", false);
+  request.onload = function() {
+    if (request.responseText == "Something went wrong") {
+        const embed = new MessageEmbed()
+        .setTitle("Invalid Username!")
+        .setColor(0xff0000)
+        msg.channel.send(embed);
+        hasFailed = true
+        return
+  }
+  if (hasFailed){
     console.log("Skills finished by <@" + msg.author + ">")
     logger.write(getCurPSTDate() + "Skills finished by <@" + msg.author + ">\n")
+    return
+  }
+  var d = request.responseText.split("<tr>")
+
+  for (i = 0; i < d.length; i++) { 
+      d[i] = d[i].split("</td><td>")
+      if (d[i][1] != undefined) {
+          var newItem = [d[i][0].substring(4), d[i][1],0]
+          profiles.push(newItem)
+          if (d[i][1] == args[2].charAt(0).toUpperCase() + args[2].slice(1)) {
+              profileID = d[i][0].substring(4)
+          }
+      }
+    }
+  }
+  request.send(null);
+
+  var uuid = getUUID(args[1])
+  if (uuid == "") {
+    const embed = new MessageEmbed()
+    .setTitle("An error occured!")
+    .setColor(0xff0000)
+    .setDescription("Try again later!");
+    msg.channel.send(embed);
+    hasFailed = true
+    return
+  }
+  if (hasFailed){
+    console.log("Skills failed by <@" + msg.author + ">")
+    logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
+    return
+  }
+  
+  if (profileID == ""){
+      for (i = 0; i < profiles.length; i++) {
+        request = new XMLHttpRequest();
+        request.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + profiles[i][0], false);
+        request.responseType = 'json';
+        request.onload = function() {
+          try{
+            profiles[i][2] = JSON.parse(request.responseText)["profile"]["members"][uuid]["last_save"];
+          } catch (err) {
+            console.log(err)
+            logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+            const embed = new MessageEmbed()
+            .setTitle("An error occured!")
+            .setColor(0xff0000)
+            .setDescription("Try again later!");
+            msg.channel.send(embed);
+            hasFailed = true
+            return
+          }
+        };
+        if (hasFailed){
+          console.log("Skills failed by <@" + msg.author + ">")
+          logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
+          return
+        }
+        request.send(null);
+      }
+      
+      profiles.sort(function(a,b){
+          return b[2] - a[2];
+      });
+      var desc = "Try: =skills " + args[1] + " <profile>\n\n"
+      desc = desc + "**" + args[1] + "'s profiles:**\n"
+      desc = desc + "*Sorted by last played*\n"
+      for (i=0; i < profiles.length; i++) {
+          desc += profiles[i][1] + "\n"
+      }
+      const embed = new MessageEmbed()
+      .setTitle("Profile doesn't exist!")
+      .setColor(0xff0000)
+      .setDescription(desc);
+      msg.channel.send(embed);
+      return
+  }
+                
+  request = new XMLHttpRequest();
+  request.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + key + "&profile=" + profileID, false);
+  request.responseType = 'json';
+  var data = {};
+  request.onload = function() {
+    const embed = new MessageEmbed()
+    .setTitle(args[1] + "'s skills:")
+    .setColor(0x00ffff);
+    var member;
+    try{
+      member = JSON.parse(request.responseText)["profile"]["members"][uuid];
+    } catch (err) {
+      console.log(err);
+      logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+      return
+      hasFailed = true;
+    }
+    var skillValues = [0,50,175,375,675,1175,1925,2925,4425,6425,9925,14925,22425,32425,47425,67425,97425,147425,222425,322425,522425,822425,1222425,1722425,2322425,3022425,3822425,4722425,4722425,6822425,8022425,9322425,10722425,12222425,13822425,15522425,17322425,19222425,21222425,23322425,25522425,27822425,30222425,32722425,35322425,38072425,40972425,44072425,47472425,51172425,55172425,Infinity]
+    var rune = [0,50,150,275,435,635,885,1200,1600,2100,2725,3510,4510,5760,7325,9325,11825,14950,18950,23950,30200,38050,47850,60100,75400,94450,Infinity]
+    var sdesc = ""
+    var count = 0;
+    for (var k in member) {
+        if (k.startsWith("experience_skill_")) {
+            count ++;
+            if (k == "experience_skill_runecrafting"){
+                sdesc = ""
+                var xp = member[k]
+                var level = 0
+                while (rune[level] < xp) {
+                    level = level + 1;
+                }
+                level = level - 1
+                sdesc += "Level: " + level + "\n"
+                sdesc += "Progress: " + toKM(Math.round(xp-rune[level])).toString() + "/" + toKM(rune[level+1]-rune[level]).toString() +" (" + (Math.round((xp-rune[level])/(rune[level+1]-rune[level])*100000)/1000) + "%)\n"
+                if (Math.round(xp/94450*10000)/100 > 100){
+                    sdesc += "MAX LEVEL ACHIEVED\n"
+                }else{
+                    sdesc += Math.round(xp/94450*10000)/100 + "% to level 25\n"
+                }
+                embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
+            }else{
+                sdesc = ""
+                var xp = member[k]
+                var level = 0
+                while (skillValues[level] < xp) {
+                    level = level + 1;
+                }
+                level = level - 1
+                sdesc += "Level: " + level + "\n"
+                sdesc += "Progress: " + toKM(Math.round(xp-skillValues[level])).toString() + "/" + toKM(skillValues[level+1]-skillValues[level]).toString() +" (" + (Math.round((xp-skillValues[level])/(skillValues[level+1]-skillValues[level])*100000)/1000) + "%)\n"
+                if (Math.round(xp/55172425*10000)/100 > 100){
+                    sdesc += "MAX LEVEL ACHIEVED\n"
+                }else{
+                    sdesc += Math.round(xp/55172425*10000)/100 + "% to level 50\n"
+                }
+                embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
+            }
+        }
+    }                
+    if (count == 0) {
+        embed.setTitle(args[1] + "'s Skills API is disabled!")
+        .setColor(0xff0000);
+    }
+    msg.channel.send(embed);
+    return
+  }       
+  if (hasFailed){
+    console.log("Skills failed by <@" + msg.author + ">")
+    logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
+    const embed = new MessageEmbed()
+    .setTitle("An error occured!")
+    .setColor(0xff0000)
+    .setDescription("Try again later.");
+    msg.channel.send(embed);
+    return
+    return
+  }
+  request.send(null);
+  console.log("Skills finished by <@" + msg.author + ">")
+  logger.write(getCurPSTDate() + "Skills finished by <@" + msg.author + ">\n")
 }
+
 function help(msg) {
     console.log("Help called by <@" + msg.author + ">")
     logger.write(getCurPSTDate() + "Help called by <@" + msg.author + ">\n")
@@ -413,47 +501,112 @@ function help(msg) {
     console.log("Help finished by <@" + msg.author + ">")
     logger.write(getCurPSTDate() + "Help finished by <@" + msg.author + ">\n")
 }
+
 function profiles(msg) {
     console.log("Profiles called by <@" + msg.author + ">")
-    logger.write(getCurPSTDate() + "Profiles finished by <@" + msg.author + ">\n")
+    logger.write(getCurPSTDate() + "Profiles called by <@" + msg.author + ">\n")
     var profiles = [];
+    var hasFailed = false;
     var args = msg.content.split(" ");
     var request = new XMLHttpRequest();
-    request.open("GET", "https://sky.lea.moe/api/" + args[1] + "/profiles?html", true);
-    request.send(null);
-    request.onreadystatechange = function() {
-        if (request.readyState == 4){
-            if (request.responseText == "Something went wrong") {
-                const embed = new MessageEmbed()
-                .setTitle("Invalid Username!")
-                .setColor(0xff0000)
-                        
-                msg.channel.send(embed);
-                return
-            }
-            var d = request.responseText.split("<tr>")
-
-            for (i = 0; i < d.length; i++) { 
-                 d[i] = d[i].split("</td><td>")
-                if (d[i][1] != undefined) {
-                    profiles.push(d[i][1])
-                }
-            }
-            var desc = ""
-            for (i=0; i < profiles.length; i++) {
-                desc += profiles[i] + "\n"
-            }
-            const embed = new MessageEmbed()
-            .setTitle(args[1] + "'s profiles")
-            .setColor(0x00ffff)
-            .setDescription(desc);
-            msg.channel.send(embed);
-            return
-        }
+    request.open("GET", "https://sky.lea.moe/api/" + args[1] + "/profiles?html", false);
+    
+    request.onload = function() {
+      if (request.responseText == "Something went wrong") {
+          const embed = new MessageEmbed()
+          .setTitle("Invalid Username!")
+          .setColor(0xff0000)
+          msg.channel.send(embed);
+          hasFailed = true
+          return
+      }
+      var d = request.responseText.split("<tr>")
+      for (i = 0; i < d.length; i++) { 
+          d[i] = d[i].split("</td><td>")
+          if (d[i][1] != undefined) {
+            var newItem = [d[i][0].substring(4), d[i][1],0]
+            profiles.push(newItem)
+          }
+      }
     };
+    request.send(null);
+
+    if (hasFailed){
+      console.log("Skills finished by <@" + msg.author + ">")
+      logger.write(getCurPSTDate() + "Skills finished by <@" + msg.author + ">\n")
+      return
+    }
+    
+    var uuid = getUUID(args[1])
+    if (uuid == "") {
+      const embed = new MessageEmbed()
+      .setTitle("An error occured!")
+      .setColor(0xff0000)
+      .setDescription("Try again later!");
+      msg.channel.send(embed);
+      hasFailed = true
+    }
+
+    if (hasFailed){
+      console.log("Skills failed by <@" + msg.author + ">")
+      logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
+      return
+    }
+
+    for (i = 0; i < profiles.length; i++) {
+      request = new XMLHttpRequest();
+      request.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + profiles[i][0], false);
+      request.responseType = 'json';
+      request.onload = function() {
+        try{
+          profiles[i][2] = JSON.parse(request.responseText)["profile"]["members"][uuid]["last_save"];
+        } catch (err) {
+          console.log(err)
+          logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+          const embed = new MessageEmbed()
+          .setTitle("An error occured!")
+          .setColor(0xff0000)
+          .setDescription("Try again later!");
+          msg.channel.send(embed);
+          hasFailed = true
+          return
+        }
+      };
+      request.send(null);
+    }
+    if (hasFailed){
+      console.log("Skills failed by <@" + msg.author + ">")
+      logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
+      return
+    }
+    profiles.sort(function(a,b){
+        return b[2] - a[2];
+    });
+    var desc = ""
+    desc = desc + "*Sorted by last played*\n"
+    for (i=0; i < profiles.length; i++) {
+        desc += profiles[i][1] + "\n"
+    }
+    const embed = new MessageEmbed()
+    .setTitle(args[1] + "'s profiles")
+    .setColor(0x00ffff)
+    .setDescription(desc);
+    msg.channel.send(embed);
     console.log("Profiles finished by <@" + msg.author + ">")
     logger.write(getCurPSTDate() + "Profiles finished by <@" + msg.author + ">\n")
 }
+
+function test(msg) {
+  var randomNumber = getRandomInt(3)
+  msg.channel.send("<@" + msg.author + "> " + testCommandMessages[randomNumber])
+  if (randomNumber == 2) {
+      for(var i = 0; i < 14; i ++) {
+          msg.channel.send("<@" + msg.author + "> " + testCommandMessages[randomNumber])
+      }
+  }
+}
+
+//Periodic Functions
 function findUpdate(){
   console.log("Checking for an update...")
   logger.write(getCurPSTDate() + "Checking for an update...\n")
@@ -478,6 +631,12 @@ function findUpdate(){
           } catch (err) {
             console.log(err)
             logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+            const embed = new MessageEmbed()
+            .setTitle("An error occured!")
+            .setColor(0xff0000)
+            .setDescription("Try again later.");
+            msg.channel.send(embed);
+            return
           }
       } else {
           
@@ -485,6 +644,7 @@ function findUpdate(){
   };
   rt.send(null);
 }
+
 function findKeys(){
     console.log("Checking API keys...")
     logger.write(getCurPSTDate() + "Checking API keys...\n")
@@ -508,6 +668,12 @@ function findKeys(){
                 } catch (err) {
                   console.log(err)
                   logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+                  const embed = new MessageEmbed()
+                  .setTitle("An error occured!")
+                  .setColor(0xff0000)
+                  .setDescription("Try again later!");
+                  msg.channel.send(embed);
+                  return
                 }
             } else {
                 
@@ -529,12 +695,12 @@ function findKeys(){
             console.log(dif2.length)
 
             if (dif.length != 0 || dif2.length != 0) {
-                console.log("Something was changed: +" + dif + ", -" + dif2)
-                logger.write(getCurPSTDate() + "Something was changed: +" + dif + ", -" + dif2 + "\n")
+                console.log("Something was changed: +" + dif.length + ", -" + dif2.length)
+                logger.write(getCurPSTDate() + "Something was changed: +" + dif.length + ", -" + dif2.length + "\n")
                 fs.writeFile('newFields.txt', keys.join("\n"), function (err) {
                     if (err) throw err;
                     console.log('Saved to file!');
-                    logger.write(getCurPSTDate() + "Saved to file!n")
+                    logger.write(getCurPSTDate() + "Saved to file!\n")
                     });
                 if (dif.length != 0) {
                     tg += "**Added:**\n"
@@ -564,17 +730,42 @@ function findKeys(){
             logger.write(getCurPSTDate() + "Error reading newFields.txt while checking keys!\n")
         }
     });
-    //kj = ["a"]
-   
-    
 }
+
+//Start logging
+var logFileName = getCurPSTDate().replace(/:/gi,"_").replace("[","").slice(0,-2) + ".txt"
+console.log("saving files to: " + logFileName)
+var logger = fs.createWriteStream('logs/' + logFileName, {
+  flags: 'a'
+})
+logger.write(getCurPSTDate() + 'saving files to: ' + logFileName + '\n')
+
+//Open Files
+fs.readFile(__dirname + '/newFields.txt', {encoding: 'utf-8'}, function(err,data){
+    if (!err) {
+        kj = data.split("\n")
+    } else {
+        console.log(err);
+        logger.write(getCurPSTDate() + 'error reading newFields.txt ' + err + '\n')
+    }
+});
+
+fs.readFile(__dirname + '/lastUpdateCode.txt', {encoding: 'utf-8'}, function(err,data){
+    if (!err) {
+      upC = data.replace(/(\r\n|\n|\r)/gm,"")
+    } else {
+      console.log(err);
+      logger.write(getCurPSTDate() + 'error reading lastUpdateCode.txt ' + err + '\n')
+    }
+});
+
+//Start Bot
 client.on('ready', () => {
     
     channel = client.channels.cache.get('729889897485434991')
     
     console.log(`Logged in as ${client.user.tag}!`);
     logger.write(getCurPSTDate() + `Logged in as ${client.user.tag}!` + "\n")
-    client.user.setActivity("=help | created by tillvit");
     findKeys()
     findUpdate() 
     setInterval(function(){ 
@@ -585,15 +776,14 @@ client.on('ready', () => {
     UpdateTimers()
     setInterval(function(){ 
         UpdateTimers()
+        client.user.setActivity("=help | created by tillvit");
     }, 5000);
     setInterval(function(){ 
         getTime()
     }, 60000);
 });
 
-var testCommandMessages = ["is bipolar", "gae", ", 15 seconds could ping you 15 times in discord"];
-
-
+//Message Receieved
 client.on('message', msg => {
     if (msg.channel.type == "dm" || msg.channel.name == "bot") {
         if (msg.content.startsWith("=skills")) {
@@ -606,18 +796,10 @@ client.on('message', msg => {
             profiles(msg)
         }
         if (msg.content.startsWith("=test")) {
-            //msg.channel.bulkDelete(1)
-            var randomNumber = getRandomInt(3)
-            msg.channel.send("<@" + msg.author + "> " + testCommandMessages[randomNumber])
-            if (randomNumber == 2) {
-                for(var i = 0; i < 14; i ++) {
-                    msg.channel.send("<@" + msg.author + "> " + testCommandMessages[randomNumber])
-                }
-
-            }
-
+            test(msg)
         }
     } 
 });
 
+//Log into bot
 client.login(process.env.DISCORD_TOKEN);
