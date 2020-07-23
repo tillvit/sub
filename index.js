@@ -1015,4 +1015,5 @@ client.on('message', msg => {
     } 
 });
 
+//Log into bot
 client.login(process.env.DISCORD_TOKEN);
