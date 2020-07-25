@@ -20,28 +20,30 @@ const express = require('express');
 const { Client, MessageEmbed } = require('discord.js');
 const client = new Client();
 const { exec } = require('child_process');
-const levenshtein = require('node-levenshtein')
+const {distance, closest} = require('fastest-levenshtein')
 
 //Repl.it start
 const app = express();
 const port = 3000;
 
-app.get('/', (req, res) => res.send('Hello World!'));
+app.get('/', (req, res) => res.send('Bot is running!'));
 
 app.listen(port, () => console.log(`Example app listening at http://localhost:${port}`));
 
 //Declare Globals
-var key = process.env.HYPIXEL_API_KEY
 var upC = ""
 var kj = []
 var keys = []
 var kp = [["c2189a914ed846b9a137ed92cec5257f","c2189a914ed846b9a137ed92cec5257f"],["dae29cb637bb4193a737aaef10315b72","b305db79094d4e828d7f500f0d82fac2"],["dae29cb637bb4193a737aaef10315b72","724c64a2fc8b4842852b6b4c2c6ef241"],["7f058ec852f44cfc97b46166ababac70","e1ed1823b443477d96b4281b194e17ab"],["672ef79b4d0a4805bc529d1ae44bc26b","672ef79b4d0a4805bc529d1ae44bc26b"]]
 var timerNames = ["Magma Boss", "Dark Auction", "Bank", "New Year", "Spooky Fest", "Winter Fest", "Travelling Zoo"]
 var timers = [0,0,0,0,0,0,0]
-var commands = [["=help","Lists commands"],["=skills <ign> <profile>", "Shows the skills of a player in a profile"],["=profiles <ign>", "Lists the profiles of a player"],["=bazaar <margin/profit/smart/worst>\nor\n=bazaar info <product>", "Shows best products to flip in the bazaar"],["=test", "Test command run at your own risk"]]
+var commands = [["=help","Lists commands"],["=skills <ign> <profile>", "Shows the skills of a player in a profile"],["=profiles <ign>", "Lists the profiles of a player"],["=bazaar <margin/profit/smart/worst>\nor\n=bazaar info <product>\nor =bazaar crafts <orders/insta> <margin/profit>", "Shows best products to flip/craft in the bazaar"],["=test", "Test command run at your own risk"]]
 var testCommandMessages = ["is bipolar", "gae", ", 15 seconds could ping you 15 times in discord"];
 var itemNames = {"BROWN_MUSHROOM":"Brown Mushroom","INK_SACK:3":"Cocoa Beans","INK_SACK:4":"Lapis Lazuli","TARANTULA_WEB":"Tarantula Web","CARROT_ITEM":"Carrot","ENCHANTED_POTATO":"Enchanted Potato","ENCHANTED_SLIME_BALL":"Enchanted Slimeball","ENCHANTED_RED_MUSHROOM":"Enchanted Red Mushroom","ENCHANTED_GOLDEN_CARROT":"Enchanted Golden Carrot","ENCHANTED_RABBIT_HIDE":"Enchanted Rabbit Hide","ENCHANTED_BIRCH_LOG":"Enchanted Birch Wood","ENCHANTED_GUNPOWDER":"Enchanted Gunpowder","ENCHANTED_MELON":"Enchanted Melon","ENCHANTED_SUGAR":"Enchanted Sugar","CACTUS":"Cactus","ENCHANTED_BLAZE_ROD":"Enchanted Blaze Rod","ENCHANTED_CAKE":"Enchanted Cake","PUMPKIN":"Pumpkin","ENCHANTED_BROWN_MUSHROOM":"Enchanted Brown Mushroom","WHEAT":"Wheat","ENCHANTED_RAW_SALMON":"Enchanted Raw Salmon","ENCHANTED_GLISTERING_MELON":"Enchanted Glistering Melon","PRISMARINE_SHARD":"Prismarine Shard","PROTECTOR_FRAGMENT":"Protector Dragon Fragment","ENCHANTED_EMERALD":"Enchanted Emerald","ENCHANTED_SPIDER_EYE":"Enchanted Spider Eye","RED_MUSHROOM":"Red Mushroom","MUTTON":"Mutton","ENCHANTED_MELON_BLOCK":"Enchanted Melon Block","DIAMOND":"Diamond","WISE_FRAGMENT":"Wise Dragon Fragment","COBBLESTONE":"Cobblestone","SPIDER_EYE":"Spider Eye","RAW_FISH":"Raw Fish","ENCHANTED_PUFFERFISH":"Enchanted Pufferfish","POTATO_ITEM":"Potato","ENCHANTED_HUGE_MUSHROOM_1":"Enchanted Brown Mushroom Block","ENCHANTED_COBBLESTONE":"Enchanted Cobblestone","ENCHANTED_HUGE_MUSHROOM_2":"Enchanted Red Mushroom Block","ICE_BAIT":"Ice Bait","PORK":"Raw Porkchop","PRISMARINE_CRYSTALS":"Prismarine Crystals","ICE":"Ice","HUGE_MUSHROOM_1":"Brown Mushroom Block","HUGE_MUSHROOM_2":"Red Mushroom Block","LOG_2:1":"Dark Oak Wood","ENCHANTED_SNOW_BLOCK":"Enchanted Snow Block","GOLDEN_TOOTH":"Golden Tooth","STRING":"String","RABBIT_FOOT":"Rabbit's Foot","REDSTONE":"Redstone","ENCHANTED_CACTUS_GREEN":"Enchanted Cactus Green","ENCHANTED_CARROT_ON_A_STICK":"Was Temporarily: Enchanted Carrot on a Stick","ENCHANTED_LAPIS_LAZULI_BLOCK":"Enchanted Lapis Block","ENCHANTED_ENDSTONE":"Enchanted End Stone","ENCHANTED_COOKIE":"Enchanted Cookie","ENCHANTED_SAND":"Enchanted Sand","ENCHANTED_STRING":"Enchanted String","STRONG_FRAGMENT":"Strong Dragon Fragment","SLIME_BALL":"Slimeball","SNOW_BALL":"Snowball","HOLY_FRAGMENT":"Holy Dragon Fragment","ENCHANTED_ACACIA_LOG":"Enchanted Acacia Wood","ENCHANTED_EGG":"Enchanted Egg","SAND":"Sand","RAW_CHICKEN":"Raw Chicken","ENCHANTED_LAPIS_LAZULI":"Enchanted Lapis Lazuli","ENCHANTED_GHAST_TEAR":"Enchanted Ghast Tear","ENCHANTED_COCOA":"Enchanted Cocoa Bean","CARROT_BAIT":"Carrot Bait","SEEDS":"Seeds","ENCHANTED_LEATHER":"Enchanted Leather","ENCHANTED_SPONGE":"Enchanted Sponge","HAY_BLOCK":"Hay Bale","FLINT":"Flint","INK_SACK":"Ink Sack","ENCHANTED_ROTTEN_FLESH":"Enchanted Rotten Flesh","WOLF_TOOTH":"Wolf Tooth","ENCHANTED_SPRUCE_LOG":"Enchanted Spruce Wood","ENCHANTED_GRILLED_PORK":"Enchanted Grilled Pork","ENCHANTED_NETHER_STALK":"Enchanted Nether Wart","ENCHANTED_REDSTONE_BLOCK":"Enchanted Redstone Block","ENCHANTED_QUARTZ_BLOCK":"Enchanted Quartz Block","GREEN_CANDY":"Green Candy","ENCHANTED_REDSTONE":"Enchanted Redstone","ENCHANTED_REDSTONE_LAMP":"Enchanted Redstone Lamp","GRAVEL":"Gravel","MELON":"Melon","ENCHANTED_LAVA_BUCKET":"Enchanted Lava Bucket","ENCHANTED_PACKED_ICE":"Enchanted Packed Ice","RAW_FISH:3":"Pufferfish","ENCHANTED_PRISMARINE_SHARD":"Enchanted Prismarine Shard","ENCHANTED_IRON_BLOCK":"Enchanted Iron Block","BONE":"Bone","RAW_FISH:2":"Clownfish","RAW_FISH:1":"Raw Salmon","REVENANT_FLESH":"Revenant Flesh","ENCHANTED_GLOWSTONE":"Enchanted Glowstone","ENCHANTED_PORK":"Enchanted Pork","FEATHER":"Feather","NETHERRACK":"Netherrack","WHALE_BAIT":"Whale Bait","SPONGE":"Sponge","BLAZE_ROD":"Blaze Rod","ENCHANTED_DARK_OAK_LOG":"Enchanted Dark Oak Wood","YOUNG_FRAGMENT":"Young Dragon Fragment","ENCHANTED_CLOWNFISH":"Enchanted Clownfish","ENCHANTED_GOLD":"Enchanted Gold","ENCHANTED_RAW_CHICKEN":"Enchanted Raw Chicken","ENCHANTED_WATER_LILY":"Enchanted Lily Pad","LOG:1":"Spruce Wood","CATALYST":"Catalyst","LOG:3":"Jungle Wood","LOG:2":"Birch Wood","BLESSED_BAIT":"Blessed Bait","ENCHANTED_GLOWSTONE_DUST":"Enchanted Glowstone Dust","ENCHANTED_INK_SACK":"Enchanted Ink Sack","ENCHANTED_CACTUS":"Enchanted Cactus","ENCHANTED_SUGAR_CANE":"Enchanted Sugar Cane","ENCHANTED_COOKED_SALMON":"Enchanted Cooked Salmon","ENCHANTED_SEEDS":"Enchanted Seeds","LOG":"Oak Wood","GHAST_TEAR":"Ghast Tear","UNSTABLE_FRAGMENT":"Unstable Dragon Fragment","ENCHANTED_ENDER_PEARL":"Enchanted Ender Pearl","PURPLE_CANDY":"Purple Candy","ENCHANTED_FERMENTED_SPIDER_EYE":"Enchanted Fermented Spider Eye","SPIKED_BAIT":"Spiked Bait","ENCHANTED_GOLD_BLOCK":"Enchanted Gold Block","ENCHANTED_JUNGLE_LOG":"Enchanted Jungle Wood","ENCHANTED_FLINT":"Enchanted Flint","IRON_INGOT":"Iron Ingot","ENCHANTED_EMERALD_BLOCK":"Enchanted Emerald Block","ENCHANTED_CLAY_BALL":"Enchanted Clay","GLOWSTONE_DUST":"Glowstone Dust","GOLD_INGOT":"Gold Ingot","REVENANT_VISCERA":"Revenant Viscera","TARANTULA_SILK":"Tarantula Silk","ENCHANTED_MUTTON":"Enchanted Mutton","SUPER_COMPACTOR_3000":"Super Compactor 3000","SUPER_EGG":"Super Enchanted Egg","ENCHANTED_IRON":"Enchanted Iron","STOCK_OF_STONKS":"Stock of Stonks","ENCHANTED_HAY_BLOCK":"Enchanted Hay Bale","ENCHANTED_PAPER":"Enchanted Paper","ENCHANTED_BONE":"Enchanted Bone","ENCHANTED_DIAMOND_BLOCK":"Enchanted Diamond Block","SPOOKY_BAIT":"Spooky Bait","SUPERIOR_FRAGMENT":"Superior Dragon Fragment","EMERALD":"Emerald","ENCHANTED_RABBIT_FOOT":"Enchanted Rabbit Foot","LIGHT_BAIT":"Light Bait","HOT_POTATO_BOOK":"Hot Potato Book","ENCHANTED_ICE":"Enchanted Ice","CLAY_BALL":"Clay","OLD_FRAGMENT":"Old Dragon Fragment","GREEN_GIFT":"Green Gift","PACKED_ICE":"Packed Ice","WATER_LILY":"Lily Pad","LOG_2":"Acacia Wood","HAMSTER_WHEEL":"Hamster Wheel","ENCHANTED_OBSIDIAN":"Enchanted Obsidian","ENCHANTED_COAL":"Enchanted Coal","ENCHANTED_QUARTZ":"Enchanted Quartz","COAL":"Coal","ENDER_PEARL":"Ender Pearl","ENCHANTED_COAL_BLOCK":"Enchanted Block of Coal","ENCHANTED_PRISMARINE_CRYSTALS":"Enchanted Prismarine Crystals","ENCHANTED_WET_SPONGE":"Enchanted Wet Sponge","ENCHANTED_RAW_FISH":"Enchanted Raw Fish","ENDER_STONE":"End Stone","QUARTZ":"Nether Quartz","FOUL_FLESH":"Foul Flesh","RAW_BEEF":"Raw Beef","ENCHANTED_EYE_OF_ENDER":"Enchanted Eye of Ender","ENCHANTED_CARROT_STICK":"Enchanted Carrot on a Stick","RECOMBOBULATOR_3000":"Recombobulator 3000","SUGAR_CANE":"Sugar Cane","MAGMA_CREAM":"Magma Cream","RED_GIFT":"Red Gift","ENCHANTED_RAW_BEEF":"Enchanted Raw Beef","ENCHANTED_FEATHER":"Enchanted Feather","ENCHANTED_SLIME_BLOCK":"Enchanted Slime Block","ENCHANTED_OAK_LOG":"Enchanted Oak Wood","RABBIT_HIDE":"Rabbit Hide","WHITE_GIFT":"White Gift","RABBIT":"Raw Rabbit","SULPHUR":"Gunpowder","NETHER_STALK":"Nether Wart","DARK_BAIT":"Dark Bait","ENCHANTED_CARROT":"Enchanted Carrot","ENCHANTED_PUMPKIN":"Enchanted Pumpkin","ROTTEN_FLESH":"Rotten Flesh","ENCHANTED_COOKED_FISH":"Enchanted Cooked Fish","OBSIDIAN":"Obsidian","MINNOW_BAIT":"Minnow Bait","ENCHANTED_MAGMA_CREAM":"Enchanted Magma Cream","ENCHANTED_FIREWORK_ROCKET":"Enchanted Firework Rocket","LEATHER":"Leather","ENCHANTED_COOKED_MUTTON":"Enchanted Cooked Mutton","ENCHANTED_RABBIT":"Enchanted Raw Rabbit","ENCHANTED_BREAD":"Enchanted Bread","FUMING_POTATO_BOOK":"Fuming Potato Book","ENCHANTED_CHARCOAL":"Enchanted Charcoal","ENCHANTED_BLAZE_POWDER":"Enchanted Blaze Powder","SUMMONING_EYE":"Summoning Eye","FISH_BAIT":"Fish Bait","SNOW_BLOCK":"Snow Block","ENCHANTED_BAKED_POTATO":"Enchanted Baked Potato","COMPACTOR":"Compactor","ENCHANTED_DIAMOND":"Enchanted Diamond"};
 var itemIDs = {}
+
+var crafts = {"ENCHANTED_POTATO":{"POTATO_ITEM":160},"ENCHANTED_SLIME_BALL":{"SLIME_BALL":160},"ENCHANTED_RED_MUSHROOM":{"RED_MUSHROOM":160},"ENCHANTED_GOLDEN_CARROT":{"ENCHANTED_CARROT":128,"CARROT_ITEM":32,"GOLD_INGOT":29},"ENCHANTED_RABBIT_HIDE":{"RABBIT_HIDE":576},"ENCHANTED_BIRCH_LOG":{"LOG:2":160},"ENCHANTED_GUNPOWDER":{"SULPHUR":160},"ENCHANTED_MELON":{"MELON":160},"ENCHANTED_SUGAR":{"SUGAR_CANE":160},"ENCHANTED_BLAZE_ROD":{"ENCHANTED_BLAZE_POWDER":160},"ENCHANTED_BROWN_MUSHROOM":{"BROWN_MUSHROOM":160},"ENCHANTED_RAW_SALMON":{"RAW_FISH:1":160},"ENCHANTED_GLISTERING_MELON":{"GOLD_INGOT":228,"MELON":256},"ENCHANTED_EMERALD":{"EMERALD":160},"ENCHANTED_SPIDER_EYE":{"SPIDER_EYE":160},"ENCHANTED_MELON_BLOCK":{"ENCHANTED_MELON":160},"ENCHANTED_PUFFERFISH":{"RAW_FISH:3":160},"ENCHANTED_PRISMARINE_SHARD":{"PRISMARINE_SHARD":160},"ENCHANTED_HUGE_MUSHROOM_1":{"HUGE_MUSHROOM_1":576},"ENCHANTED_COBBLESTONE":{"COBBLESTONE":160},"ENCHANTED_HUGE_MUSHROOM_2":{"HUGE_MUSHROOM_2":576},"ICE_BAIT":{"ICE_BAIT":1,"RAW_FISH":1},"HUGE_MUSHROOM_1":{"BROWN_MUSHROOM":9},"HUGE_MUSHROOM_2":{"RED_MUSHROOM":9},"ENCHANTED_SNOW_BLOCK":{"SNOW_BLOCK":160},"GOLDEN_TOOTH":{"ENCHANTED_GOLD":32,"WOLF_TOOTH":128},"ENCHANTED_LAPIS_LAZULI_BLOCK":{"ENCHANTED_LAPIS_LAZULI":160},"ENCHANTED_ENDSTONE":{"ENDER_STONE":160},"ENCHANTED_COOKIE":{"ENCHANTED_COCOA":128,"WHEAT":32},"ENCHANTED_SAND":{"SAND":160},"ENCHANTED_STRING":{"STRING":160},"ENCHANTED_ACACIA_LOG":{"LOG:2":160},"ENCHANTED_LAPIS_LAZULI":{"INK_SACK:4":160},"ENCHANTED_GHAST_TEAR":{"GHAST_TEAR":5},"ENCHANTED_COCOA":{"INK_SACK:3":160},"CARROT_BAIT":{"CARROT_ITEM":1,"RAW_FISH":1},"ENCHANTED_LEATHER":{"LEATHER":576},"ENCHANTED_SPONGE":{"SPONGE":40},"HAY_BLOCK":{"WHEAT":9},"ENCHANTED_ROTTEN_FLESH":{"ROTTEN_FLESH":160},"ENCHANTED_SPRUCE_LOG":{"LOG:1":160},"ENCHANTED_GRILLED_PORK":{"ENCHANTED_PORK":160},"ENCHANTED_NETHER_STALK":{"NETHER_STALK":160},"ENCHANTED_REDSTONE_BLOCK":{"ENCHANTED_REDSTONE":160},"ENCHANTED_QUARTZ_BLOCK":{"ENCHANTED_QUARTZ":160},"ENCHANTED_REDSTONE":{"REDSTONE":160},"ENCHANTED_REDSTONE_LAMP":{"ENCHANTED_REDSTONE":128,"ENCHANTED_GLOWSTONE_DUST":32},"ENCHANTED_LAVA_BUCKET":{"ENCHANTED_COAL_BLOCK":2,"ENCHANTED_IRON":3},"ENCHANTED_PACKED_ICE":{"ENCHANTED_ICE":160},"ENCHANTED_IRON_BLOCK":{"ENCHANTED_IRON":160},"ENCHANTED_GLOWSTONE":{"ENCHANTED_GLOWSTONE_DUST":160},"ENCHANTED_PORK":{"PORK":160},"WHALE_BAIT":{"FISH_BAIT":1,"LIGHT_BAIT":1,"DARK_BAIT":1,"BLESSED_BAIT":1},"ENCHANTED_DARK_OAK_LOG":{"LOG_2:1":160},"ENCHANTED_CLOWNFISH":{"RAW_FISH:2":160},"ENCHANTED_GOLD":{"GOLD_INGOT":160},"ENCHANTED_RAW_CHICKEN":{"RAW_CHICKEN":160},"ENCHANTED_WATER_LILY":{"WATER_LILY":160},"BLESSED_BAIT":{"RAW_FISH":1,"GOLD_INGOT":9,"PRISMARINE_CRYSTALS":1},"ENCHANTED_GLOWSTONE_DUST":{"GLOWSTONE_DUST":160},"ENCHANTED_INK_SACK":{"INK_SACK":80},"ENCHANTED_CACTUS":{"ENCHANTED_CACTUS_GREEN":160},"ENCHANTED_SUGAR_CANE":{"ENCHANTED_SUGAR":160},"ENCHANTED_COOKED_SALMON":{"ENCHANTED_RAW_SALMON":160},"ENCHANTED_SEEDS":{"SEEDS":160},"ENCHANTED_ENDER_PEARL":{"ENDER_PEARL":20},"ENCHANTED_FERMENTED_SPIDER_EYE":{"ENCHANTED_SPIDER_EYE":64,"BROWN_MUSHROOM":64,"SUGAR_CANE":64},"SPIKED_BAIT":{"RAW_FISH:3":1,"RAW_FISH":1},"ENCHANTED_GOLD_BLOCK":{"ENCHANTED_GOLD":160},"ENCHANTED_JUNGLE_LOG":{"LOG:3":160},"ENCHANTED_FLINT":{"FLINT":160},"ENCHANTED_EMERALD_BLOCK":{"ENCHANTED_EMERALD":160},"ENCHANTED_CLAY_BALL":{"CLAY_BALL":160},"REVENANT_VISCERA":{"ENCHANTED_STRING":32,"REVENANT_FLESH":128},"TARANTULA_SILK":{"TARANTULA_WEB":128,"ENCHANTED_FLINT":32},"ENCHANTED_MUTTON":{"MUTTON":160},"SUPER_COMPACTOR_3000":{"ENCHANTED_COBBLESTONE":448,"ENCHANTED_REDSTONE_BLOCK":1},"SUPER_EGG":{"ENCHANTED_EGG":144},"ENCHANTED_IRON":{"IRON_INGOT":160},"ENCHANTED_HAY_BLOCK":{"HAY_BLOCK":144},"ENCHANTED_PAPER":{"SUGAR_CANE":192},"ENCHANTED_BONE":{"BONE":160},"ENCHANTED_DIAMOND_BLOCK":{"ENCHANTED_DIAMOND":160},"SPOOKY_BAIT":{"RAW_FISH":1,"PUMPKIN":1},"ENCHANTED_RABBIT_FOOT":{"RABBIT_FOOT":160},"LIGHT_BAIT":{"PRISMARINE_CRYSTALS":2,"RAW_FISH":1},"HOT_POTATO_BOOK":{"ENCHANTED_BAKED_POTATO":1,"SUGAR_CANE":3},"ENCHANTED_ICE":{"ICE":160},"PACKED_ICE":{"ICE":9},"ENCHANTED_OBSIDIAN":{"OBSIDIAN":160},"ENCHANTED_COAL":{"COAL":160},"ENCHANTED_QUARTZ":{"QUARTZ":160},"ENCHANTED_COAL_BLOCK":{"ENCHANTED_COAL":160},"ENCHANTED_PRISMARINE_CRYSTALS":{"PRISMARINE_CRYSTALS":80},"ENCHANTED_WET_SPONGE":{"ENCHANTED_SPONGE":40},"ENCHANTED_RAW_FISH":{"RAW_FISH":160},"ENCHANTED_EYE_OF_ENDER":{"BLAZE_ROD":32,"ENCHANTED_ENDER_PEARL":16},"ENCHANTED_CARROT_STICK":{"LOG":1,"ENCHANTED_CARROT":64},"ENCHANTED_RAW_BEEF":{"RAW_BEEF":160},"ENCHANTED_FEATHER":{"FEATHER":160},"ENCHANTED_SLIME_BLOCK":{"ENCHANTED_SLIME_BALL":160},"ENCHANTED_OAK_LOG":{"LOG":160},"ENCHANTED_CARROT":{"CARROT_ITEM":160},"ENCHANTED_PUMPKIN":{"PUMPKIN":160},"ENCHANTED_COOKED_FISH":{"ENCHANTED_RAW_FISH":160},"ENCHANTED_MAGMA_CREAM":{"MAGMA_CREAM":160},"ENCHANTED_FIREWORK_ROCKET":{"ENCHANTED_GUNPOWDER":64,"SUGAR_CANE":18},"ENCHANTED_COOKED_MUTTON":{"ENCHANTED_MUTTON":160},"ENCHANTED_RABBIT":{"RABBIT":160},"ENCHANTED_BREAD":{"WHEAT":60},"ENCHANTED_CHARCOAL":{"COAL":128,"LOG":32},"ENCHANTED_BLAZE_POWDER":{"BLAZE_ROD":160},"FISH_BAIT":{"RAW_FISH":2,"RAW_FISH:1":1},"SNOW_BLOCK":{"SNOW_BALL":4},"ENCHANTED_BAKED_POTATO":{"ENCHANTED_POTATO":160},"ENCHANTED_DIAMOND":{"DIAMOND":160},"COMPACTOR":{"ENCHANTED_COBBLESTONE":7,"ENCHANTED_REDSTONE":1},"MINNOW_BAIT":{"RAW_FISH":1,"RAW_FISH:1":1}}
+
 
 //Helper Functions
 
@@ -319,22 +321,201 @@ function bazaar(msg) {
     const embed = new MessageEmbed()
     .setTitle("Missing second argument!")
     .setColor(0xff0000)
-    .setDescription("Try: =bazaar <margin/profit/smart/worst>\nor =bazaar info <product");
+    .setDescription("Try: =bazaar <margin/profit/smart/worst>\nor =bazaar info <product>\nor =bazaar crafts <orders/insta> <margin/profit>");
     msg.channel.send(embed);
     console.log("Bazaar failed by <@" + msg.author + ">")
     logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
     return
   }
 
+  var products = fetchProducts()
+
+  if (args[1] == "crafts" || args[1] == "c") {
+    if (args[2] != null && (args[2] == "orders" || args[2] == "o")) {
+      if (args[3] == null) {
+        const embed = new MessageEmbed()
+        .setTitle("Missing fourth argument!")
+        .setColor(0xff0000)
+        .setDescription("Try: =bazaar crafts orders <margin/profit>");
+        msg.channel.send(embed);
+        console.log("Bazaar failed by <@" + msg.author + ">")
+        logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
+        return 
+      }
+      if (args[3] != "margin" && args[3] != "profit" && args[3] != "m" && args[3] != "p") {
+        const embed = new MessageEmbed()
+        .setTitle("Invalid fourth argument!")
+        .setColor(0xff0000)
+        .setDescription("Try: =bazaar crafts orders <margin/profit>");
+        msg.channel.send(embed);
+        console.log("Bazaar failed by <@" + msg.author + ">")
+        logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
+        return 
+      }
+      var productDict = {}
+      var craftables = []
+      for (var i = 0; i < products.length; i ++) {
+        productDict[itemIDs[products[i][0]]] = products[i];
+      }
+      var prodNotFound = false
+      for (var item in crafts) {
+        //id, cost, sell, profit, %
+        var newItem = [item,0,0,0,0]
+        for (var ingredient in crafts[item]) {
+          if (productDict[ingredient] == null) {
+            console.log("couldn't find product: " + ingredient)
+            prodNotFound = true
+            continue
+          }
+          newItem[1] += (productDict[ingredient][2] + 0.1) * crafts[item][ingredient]
+        }
+        newItem[1] = Math.round(newItem[1]*10)/10
+        newItem[2] = Math.round((productDict[item][1]-0.1)*10)/10
+        newItem[3] = Math.round((newItem[2] - newItem[1])*10)/10
+        newItem[4] = Math.round(newItem[3]/newItem[1]*1000)/10
+        craftables.push(newItem)
+      }
+      const embed = new MessageEmbed()
+      .setColor(0x00ffff)
+      
+      if (args[3] == "margin" || args[3] == "m") {
+        embed.setTitle("Top Crafts by Margin (Buy/Sell Orders)")
+        craftables.sort(function(a, b) {
+          return b[3] - a[3];
+        });
+      }else{
+        embed.setTitle("Top Crafts by Profit % (Buy/Sell Orders)")
+        craftables.sort(function(a, b) {
+          return b[4] - a[4];
+        });
+      }
+      
+      if (prodNotFound) {
+        embed.setDescription("(Order/Sell all mats at +0.1/0.1)\nCouldn't fetch the prices of some items, so recipes needing them are not shown.")
+      }else{
+        embed.setDescription("(Order/Sell all mats at +0.1/0.1)")
+      }
+      for (var i = 0; i < 9; i ++) {
+        var desc = "Order:\n"
+        for (var ingredient in crafts[craftables[i][0]]) {
+          desc += crafts[craftables[i][0]][ingredient] + "x " + itemNames[ingredient] + " (" + productDict[ingredient][1] + " ea)\n"
+        }
+        desc += "Spend **" + toKM(craftables[i][1]) + "** and sell for **" + toKM(craftables[i][2]) + "** for a profit of **" + toKM(craftables[i][3]) + "** (" + craftables[i][4] + "%)"
+        embed.addField(itemNames[craftables[i][0]],desc,true)
+        
+      }
+      msg.channel.send(embed);
+      console.log("Bazaar finished by <@" + msg.author + ">")
+      logger.write(getCurPSTDate() + "Bazaar finished by <@" + msg.author + ">\n")
+      return
+    }else if (args[2] != null && (args[2] == "insta" || args[2] == "i")){
+      if (args[3] == null) {
+        const embed = new MessageEmbed()
+        .setTitle("Missing fourth argument!")
+        .setColor(0xff0000)
+        .setDescription("Try: =bazaar crafts insta <margin/profit>");
+        msg.channel.send(embed);
+        console.log("Bazaar failed by <@" + msg.author + ">")
+        logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
+        return 
+      }
+      if (args[3] != "margin" && args[3] != "profit" && args[3] != "m" && args[3] != "p") {
+        const embed = new MessageEmbed()
+        .setTitle("Invalid fourth argument!")
+        .setColor(0xff0000)
+        .setDescription("Try: =bazaar crafts insta <margin/profit>");
+        msg.channel.send(embed);
+        console.log("Bazaar failed by <@" + msg.author + ">")
+        logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
+        return 
+      }
+      var productDict = {}
+      var craftables = []
+      for (var i = 0; i < products.length; i ++) {
+        productDict[itemIDs[products[i][0]]] = products[i];
+      }
+      var prodNotFound = false
+      for (var item in crafts) {
+        //id, cost, sell, profit, %
+        var newItem = [item,0,0,0,0]
+        for (var ingredient in crafts[item]) {
+          if (productDict[ingredient] == null) {
+            console.log("couldn't find product: " + ingredient)
+            prodNotFound = true
+            continue
+          }
+          newItem[1] += productDict[ingredient][1] * crafts[item][ingredient]
+        }
+        newItem[1] = Math.round(newItem[1]*10)/10
+        newItem[2] = Math.round(productDict[item][2]*10)/10
+        newItem[3] = Math.round((newItem[2] - newItem[1])*10)/10
+        newItem[4] = Math.round(newItem[3]/newItem[1]*1000)/10
+        craftables.push(newItem)
+      }
+      const embed = new MessageEmbed()
+      .setColor(0x00ffff)
+      
+      if (args[3] == "margin" || args[3] == "m") {
+        embed.setTitle("Top Crafts by Margin (Insta Buy/Sell)")
+        craftables.sort(function(a, b) {
+          return b[3] - a[3];
+        });
+      }else{
+        embed.setTitle("Top Crafts by Profit % (Insta Buy/Sell)")
+        craftables.sort(function(a, b) {
+          return b[4] - a[4];
+        });
+      }
+      
+      if (prodNotFound) {
+        embed.setDescription("Couldn't fetch the prices of some items, so recipes needing them are not shown.")
+      }
+      for (var i = 0; i < 9; i ++) {
+        var desc = "Buy:\n"
+        for (var ingredient in crafts[craftables[i][0]]) {
+          desc += crafts[craftables[i][0]][ingredient] + "x " + itemNames[ingredient] + " (" + productDict[ingredient][1] + " ea)\n"
+        }
+        desc += "Spend **" + toKM(craftables[i][1]) + "** and sell for **" + toKM(craftables[i][2]) + "** for a profit of **" + toKM(craftables[i][3]) + "** (" + craftables[i][4] + "%)"
+        embed.addField(itemNames[craftables[i][0]],desc,true)
+        
+      }
+      msg.channel.send(embed);
+      console.log("Bazaar finished by <@" + msg.author + ">")
+      logger.write(getCurPSTDate() + "Bazaar finished by <@" + msg.author + ">\n")
+      return
+    }else{
+      const embed = new MessageEmbed()
+      .setTitle("Missing third argument!")
+      .setColor(0xff0000)
+      .setDescription("Try: =bazaar crafts <orders/insta> <margin/profit>");
+      msg.channel.send(embed);
+      console.log("Bazaar failed by <@" + msg.author + ">")
+      logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
+      return 
+    }
+  }
+
   var desiredProduct = ""
   var autocorrected = false
 
-  if (args[1] == "info") {
-    var query = msg.content.substring(13)
+  if (args[1] == "info" || args[1] == "i") {
+    var words = msg.content.split(" ")
+    words.splice(0,2)
+    var query = words.join(" ")
+    if (query == "") {
+      const embed = new MessageEmbed()
+      .setTitle("Missing third argument!")
+      .setColor(0xff0000)
+      .setDescription("Try: =bazaar info <product>");
+      msg.channel.send(embed);
+      console.log("Bazaar failed by <@" + msg.author + ">")
+      logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
+      return
+    }
     var suggestions = []
     var lowestDiff = 99999
     for (var key in itemIDs) {
-      var difference = levenshtein.compare(query.toLowerCase(), key.toLowerCase())
+      var difference = distance(query.toLowerCase(), key.toLowerCase())
       if (difference < lowestDiff) {
         lowestDiff = difference
         suggestions = []
@@ -343,8 +524,7 @@ function bazaar(msg) {
         suggestions.push(itemIDs[key])
       }
     }
-    console.log(suggestions)
-    console.log(lowestDiff)
+
     if (suggestions.length == 1 && lowestDiff == 0) {
       autocorrected = false
       desiredProduct = suggestions[0]
@@ -373,11 +553,9 @@ function bazaar(msg) {
       logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
       return
     }
-    console.log("product to find: " + desiredProduct)
-    console.log(autocorrected)
   }
 
-  var products = fetchProducts()
+  
   
   if (products.length == 0) {
     const embed = new MessageEmbed()
@@ -410,30 +588,35 @@ function bazaar(msg) {
 
   switch (args[1]){
     case "margin":
+    case "m":
       embed.setTitle("Top Bazaar products by Margin:")
       products.sort(function(a, b) {
         return b[3] - a[3];
       });
       break;
     case "profit":
+    case "p":
       embed.setTitle("Top Bazaar products by Profit (%):")
       products.sort(function(a, b) {
         return b[4] - a[4];
       });
       break;
     case "smart":
+    case "s":
       embed.setTitle("Top Bazaar flips:")
       products.sort(function(a, b) {
         return b[10] - a[10];
       });
       break;
     case "worst":
+    case "w":
       embed.setTitle("Worst Bazaar flips:")
       products.sort(function(a, b) {
         return a[10] - b[10];
       });
       break;
     case "info":
+    case "i":
       for (var i = 0 ; i < products.length; i ++) {
         if (itemIDs[products[i][0]] == desiredProduct) {
           embed.setTitle(itemNames[desiredProduct] + " (" + Math.round(((products[i][10] - lowestScore) / (highestScore - lowestScore))*1000)/10 + ")")
@@ -442,12 +625,69 @@ function bazaar(msg) {
           }else{
             embed.setDescription("Buy Price: " + toKM(products[i][1]) + "\nSell Price: " + toKM(products[i][2]) + "\nBuy Volume: " + toKM(products[i][6]) + "\nSell Volume: " + toKM(products[i][5]) + "\nInstant Buys: " + toKM(products[i][8]) + "\nInstant Sells: " + toKM(products[i][9]) + "\nMargin: " + toKM(products[i][3]) + " (" + products[i][4] + "%)")
           }
-          msg.channel.send(embed);
-          console.log("Bazaar finished by <@" + msg.author + ">")
-          logger.write(getCurPSTDate() + "Bazaar finished by <@" + msg.author + ">\n")
           finInfo = true;
           break;
         }
+      }
+      var productDict = {}
+      var craftables = []
+      var prodNotFound = false
+      for (var i = 0; i < products.length; i ++) {
+        productDict[itemIDs[products[i][0]]] = products[i];
+      }
+      var item = desiredProduct
+      //id, cost, sell, profit, %
+      var newItem = [item,0,0,0,0]
+      for (var ingredient in crafts[item]) {
+        if (productDict[ingredient] == null) {
+          console.log("couldn't find product: " + ingredient)
+          prodNotFound = true
+          continue
+        }
+        newItem[1] += productDict[ingredient][1] * crafts[item][ingredient]
+      }
+      newItem[1] = Math.round(newItem[1]*10)/10
+      newItem[2] = Math.round(productDict[item][2]*10)/10
+      newItem[3] = Math.round((newItem[2] - newItem[1])*10)/10
+      newItem[4] = Math.round(newItem[3]/newItem[1]*1000)/10
+      craftables.push(newItem)
+      if (!prodNotFound) {
+        var desc = "Buy:\n"
+        for (var ingredient in crafts[craftables[0][0]]) {
+          desc += crafts[craftables[0][0]][ingredient] + "x " + itemNames[ingredient] + " (" + productDict[ingredient][1] + " ea)\n"
+        }
+        desc += "Spend **" + toKM(craftables[0][1]) + "** and sell for **" + toKM(craftables[0][2]) + "** for a profit of **" + toKM(craftables[0][3]) + "** (" + craftables[0][4] + "%)"
+        embed.addField("Crafing with Insta Buy",desc,true)
+
+        craftables = []
+        //id, cost, sell, profit, %
+        var newItem = [item,0,0,0,0]
+        for (var ingredient in crafts[item]) {
+          if (productDict[ingredient] == null) {
+            console.log("couldn't find product: " + ingredient)
+            prodNotFound = true
+            continue
+          }
+          newItem[1] += (productDict[ingredient][2] + 0.1) * crafts[item][ingredient]
+        }
+        newItem[1] = Math.round(newItem[1]*10)/10
+        newItem[2] = Math.round((productDict[item][1]-0.1)*10)/10
+        newItem[3] = Math.round((newItem[2] - newItem[1])*10)/10
+        newItem[4] = Math.round(newItem[3]/newItem[1]*1000)/10
+        craftables.push(newItem)
+        var desc = "Order:\n"
+        for (var ingredient in crafts[craftables[0][0]]) {
+          desc += crafts[craftables[0][0]][ingredient] + "x " + itemNames[ingredient] + " (" + productDict[ingredient][1] + " ea)\n"
+        }
+        desc += "Spend **" + toKM(craftables[0][1]) + "** and sell for **" + toKM(craftables[0][2]) + "** for a profit of **" + toKM(craftables[0][3]) + "** (" + craftables[0][4] + "%)"
+        embed.addField("Crafing with Orders",desc,true)
+      }else {
+        embed.addField("Couldn't fetch an item's price!","Try again later",true)
+      }
+      if (finInfo){
+        msg.channel.send(embed);
+        console.log("Bazaar finished by <@" + msg.author + ">")
+        logger.write(getCurPSTDate() + "Bazaar finished by <@" + msg.author + ">\n")
       }
       if (!finInfo) {
         const embed = new MessageEmbed()
@@ -479,7 +719,6 @@ function bazaar(msg) {
   
 
   for (var i = 0; i < 9; i ++) {
-    console.log(products[i])
     embed.addField(products[i][0] + " (" + Math.round(((products[i][10] - lowestScore) / (highestScore - lowestScore))*1000)/10 + ")" ,"Buy Price: " + toKM(products[i][1]) + "\nSell Price: " + toKM(products[i][2]) + "\nBuy Volume: " + toKM(products[i][6]) + "\nSell Volume: " + toKM(products[i][5]) + "\nInstant Buys: " + toKM(products[i][8]) + "\nInstant Sells: " + toKM(products[i][9]) + "\nMargin: " + toKM(products[i][3]) + " (" + products[i][4] + "%)",true)
   }
 
@@ -693,7 +932,7 @@ function skills(msg) {
   }
                 
   request = new XMLHttpRequest();
-  request.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + key + "&profile=" + profileID, false);
+  request.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + profileID, false);
   request.responseType = 'json';
   var data = {};
   request.onload = function() {
@@ -714,6 +953,8 @@ function skills(msg) {
     var rune = [0,50,150,275,435,635,885,1200,1600,2100,2725,3510,4510,5760,7325,9325,11825,14950,18950,23950,30200,38050,47850,60100,75400,94450,Infinity]
     var sdesc = ""
     var count = 0;
+    var avg = 0;
+    var avgCount = 0;
     for (var k in member) {
         if (k.startsWith("experience_skill_")) {
             count ++;
@@ -749,12 +990,16 @@ function skills(msg) {
                     sdesc += Math.round(xp/55172425*10000)/100 + "% to level 50\n"
                 }
                 embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
+                if (k != "experience_skill_runecrafting" && k != "experience_skill_carpentry"){
+                  avg += level + (Math.round((xp-skillValues[level])/(skillValues[level+1]-skillValues[level])*1000)/1000)
+                  avgCount++;
+                }
             }
         }
     }                
     if (count == 0) {
       request = new XMLHttpRequest();
-      request.open("GET", "https://api.hypixel.net/player?key=" + key + "&uuid=" + uuid, false);
+      request.open("GET", "https://api.hypixel.net/player?key=" + process.env.HYPIXEL_API_KEY + "&uuid=" + uuid, false);
       request.responseType = 'json';
       var desc = 
       request.onload = function(){
@@ -778,10 +1023,12 @@ function skills(msg) {
         }
       }
       request.send(null)
-    }
+    }else{
+      embed.setTitle(args[1] + "'s skills: (Average Skill Level: " + Math.round((avg/avgCount)*100)/100 + ")")
+    }  
     msg.channel.send(embed);
     return
-  }       
+  } 
   if (hasFailed){
     console.log("Skills failed by <@" + msg.author + ">")
     logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
@@ -922,7 +1169,7 @@ function findUpdate(){
   console.log("Checking for an update...")
   logger.write(getCurPSTDate() + "Checking for an update...\n")
   var rt = new XMLHttpRequest();
-  rt.open("GET", "https://api.hypixel.net/skyblock/news?key=" + key, false);
+  rt.open("GET", "https://api.hypixel.net/skyblock/news?key=" + process.env.HYPIXEL_API_KEY, false);
   rt.responseType = 'json';
   rt.onload = function() {
       var status = rt.status;
@@ -1110,19 +1357,19 @@ client.on('ready', () => {
 //Message Receieved
 client.on('message', msg => {
     if (msg.channel.type == "dm" || msg.channel.name == "bot") {
-        if (msg.content.startsWith("=skills")) {
+        if (msg.content.startsWith("=skills ") || (msg.content.startsWith("=s") && msg.content.length == 2) || (msg.content.startsWith("=s "))) {
             skills(msg)
         }
-        if (msg.content.startsWith("=bazaar")) {
+        if (msg.content.startsWith("=bazaar ") || (msg.content.startsWith("=b") && msg.content.length == 2) || (msg.content.startsWith("=b "))) {
             bazaar(msg)
         }
-        if (msg.content.startsWith("=help")) {
+        if (msg.content.startsWith("=help ") || (msg.content.startsWith("=h") && msg.content.length == 2) || (msg.content.startsWith("=h "))) {
             help(msg)
         }
-        if (msg.content.startsWith("=profiles")) {
+        if (msg.content.startsWith("=profiles ") || (msg.content.startsWith("=p") && msg.content.length == 2) || (msg.content.startsWith("=p "))) {
             profiles(msg)
         }
-        if (msg.content.startsWith("=test")) {
+        if (msg.content.startsWith("=test") || (msg.content.startsWith("=t") && msg.content.length == 2) || (msg.content.startsWith("=t "))) {
             test(msg)
         }
     } 
