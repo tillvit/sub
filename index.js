@@ -31,6 +31,7 @@ app.get('/', (req, res) => res.send('Bot is running!'));
 app.listen(port, () => console.log(`Example app listening at http://localhost:${port}`));
 
 //Declare Globals
+var finishedProfiles = 0;
 var upC = ""
 var kj = []
 var keys = []
@@ -178,6 +179,28 @@ function UpdateTimers(){
     });
 }
 
+function getJSON(url) {
+  return new Promise(function (resolve, reject) {
+    var request = new XMLHttpRequest();
+    request.open("GET", url, true);
+    request.responseType = "json"
+    var json;
+    request.onload = function() {
+      try{
+        json = JSON.parse(request.responseText);
+        resolve(json);
+      } catch (err) {
+        console.log(err)
+        console.log(request.status)
+        console.log(request.responseText)
+        logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+        reject(err)
+      }
+    }
+    request.send(null)
+  });
+}
+
 function getTime(path) {
     var paths = ["bosstimer/magma/estimatedSpawn","darkauction/estimate","bank/interest/estimate","newyear/estimate","spookyFestival/estimate","winter/estimate","zoo/estimate"]
     for (var i = 0; i < paths.length; i ++){
@@ -245,74 +268,76 @@ function getItemName(id) {
 }
 
 function fetchProducts() {
-  var hasFailed = false
-  var request = new XMLHttpRequest();
-  request.open("GET", "https://api.hypixel.net/skyblock/bazaar?key=" + process.env.HYPIXEL_API_KEY, false);
-  request.responseType = "json"
-  var json;
-  request.onload = function() {
-    try{
-      json = JSON.parse(request.responseText);
-    } catch (err) {
-      console.log(err)
-      console.log(request.responseText)
-      logger.write(getCurPSTDate() + "Error parsing JSON!\n")
-      
-      hasFailed = true
-      return
+  return new Promise(function (resolve, reject) {
+    var hasFailed = false
+    var request = new XMLHttpRequest();
+    request.open("GET", "https://api.hypixel.net/skyblock/bazaar?key=" + process.env.HYPIXEL_API_KEY, false);
+    request.responseType = "json"
+    var json;
+    request.onload = function() {
+      try{
+        json = JSON.parse(request.responseText);
+      } catch (err) {
+        console.log(err)
+        console.log(request.responseText)
+        logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+        
+        hasFailed = true
+        reject(err)
+      }
     }
-  }
-  request.send(null)
-  if (hasFailed || json["success"] == false || json["products"] == null){
-    return []
-  }
-  var products = []
-  for (var key in json["products"]) {
-    //0: NAME
-    //1: BUY
-    //2: SELL
-    //3: MARGIN
-    //4: PROFIT
-    //5: S VOLUME
-    //6: B VOLUME
-    //7: VOLUME DIFF
-    //8: INSTA BUYS
-    //9: INSTA SELLS
-    //10: SMART SCORE
-    var product = ["NAME",0,0,0,0,0,0,0]
-    var status = json["products"][key]
-    if (status["buy_summary"].length == 0 || status["sell_summary"].length == 0) {
-      continue;
+    request.send(null)
+    if (hasFailed || json["success"] == false || json["products"] == null){
+      resolve([])
     }
+    var products = []
+    for (var key in json["products"]) {
+      //0: NAME
+      //1: BUY
+      //2: SELL
+      //3: MARGIN
+      //4: PROFIT
+      //5: S VOLUME
+      //6: B VOLUME
+      //7: VOLUME DIFF
+      //8: INSTA BUYS
+      //9: INSTA SELLS
+      //10: SMART SCORE
+      var product = ["NAME",0,0,0,0,0,0,0]
+      var status = json["products"][key]
+      if (status["buy_summary"].length == 0 || status["sell_summary"].length == 0) {
+        continue;
+      }
 
-    product[0] = getItemName(key)
-    product[1] = Math.round(parseFloat(status["buy_summary"][0]["pricePerUnit"],10)*10)/10
-    product[2] = Math.round(parseFloat(status["sell_summary"][0]["pricePerUnit"],10)*10)/10
-    product[3] = Math.round((product[1]-product[2])*10)/10
-    product[4] = Math.round(product[3]/product[1]*10000)/100
-    product[5] = status["quick_status"]["buyVolume"]
-    product[6] = status["quick_status"]["sellVolume"]
-    product[7] = (product[5]-product[6])
-    product[8] = status["quick_status"]["sellMovingWeek"]
-    product[9] = status["quick_status"]["buyMovingWeek"]
-    if (product[7] < 0) {
-      product[10] = (0.5*product[4]+2*(product[5]/product[6]))+3*Math.log2(product[2])*(-1)
-    }else{
-      product[10] = (0.5*product[4]+2*(product[5]/product[6]))+3*Math.log2(product[2])
+      product[0] = getItemName(key)
+      product[1] = Math.round(parseFloat(status["buy_summary"][0]["pricePerUnit"],10)*10)/10
+      product[2] = Math.round(parseFloat(status["sell_summary"][0]["pricePerUnit"],10)*10)/10
+      product[3] = Math.round((product[1]-product[2])*10)/10
+      product[4] = Math.round(product[3]/product[1]*10000)/100
+      product[5] = status["quick_status"]["buyVolume"]
+      product[6] = status["quick_status"]["sellVolume"]
+      product[7] = (product[5]-product[6])
+      product[8] = status["quick_status"]["sellMovingWeek"]
+      product[9] = status["quick_status"]["buyMovingWeek"]
+      if (product[7] < 0) {
+        product[10] = (0.5*product[4]+2*(product[5]/product[6]))+3*Math.log2(product[2])*(-1)
+      }else{
+        product[10] = (0.5*product[4]+2*(product[5]/product[6]))+3*Math.log2(product[2])
+      }
+      var multiplier = (((product[8]/7 + product[9]/7) / 2)/((product[5] + product[6]) / 2))
+      if (multiplier > 0.5){
+        product[10] = product[10] * 1
+      }else{
+        product[10] = product[10] * multiplier
+      }
+      products.push(product)
     }
-    var multiplier = (((product[8]/7 + product[9]/7) / 2)/((product[5] + product[6]) / 2))
-    if (multiplier > 0.5){
-      product[10] = product[10] * 1
-    }else{
-      product[10] = product[10] * multiplier
-    }
-    products.push(product)
-  }
-  return products
+    resolve(products)
+  });
 }
 
 //Bot Functions
-function bazaar(msg) {
+async function bazaar(msg) {
   var hasFailed = false;
   console.log("Bazaar called by <@" + msg.author + ">")
   logger.write(getCurPSTDate() + "Bazaar called by <@" + msg.author + ">" + '\n')
@@ -327,8 +352,12 @@ function bazaar(msg) {
     logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
     return
   }
-
-  var products = fetchProducts()
+  var loadingMSG = await msg.channel.send("Loading...")
+  try{
+    var products = await fetchProducts()
+  } catch (err) {
+    console.log(err)
+  }
 
   if (args[1] == "crafts" || args[1] == "c") {
     if (args[2] != null && (args[2] == "orders" || args[2] == "o")) {
@@ -337,7 +366,8 @@ function bazaar(msg) {
         .setTitle("Missing fourth argument!")
         .setColor(0xff0000)
         .setDescription("Try: =bazaar crafts orders <margin/profit>");
-        msg.channel.send(embed);
+        loadingMSG.edit("‫")
+        loadingMSG.edit(embed)
         console.log("Bazaar failed by <@" + msg.author + ">")
         logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
         return 
@@ -347,7 +377,8 @@ function bazaar(msg) {
         .setTitle("Invalid fourth argument!")
         .setColor(0xff0000)
         .setDescription("Try: =bazaar crafts orders <margin/profit>");
-        msg.channel.send(embed);
+        loadingMSG.edit("‫")
+        loadingMSG.edit(embed)
         console.log("Bazaar failed by <@" + msg.author + ">")
         logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
         return 
@@ -404,7 +435,8 @@ function bazaar(msg) {
         embed.addField(itemNames[craftables[i][0]],desc,true)
         
       }
-      msg.channel.send(embed);
+      loadingMSG.edit("‫")
+      loadingMSG.edit(embed)
       console.log("Bazaar finished by <@" + msg.author + ">")
       logger.write(getCurPSTDate() + "Bazaar finished by <@" + msg.author + ">\n")
       return
@@ -414,7 +446,8 @@ function bazaar(msg) {
         .setTitle("Missing fourth argument!")
         .setColor(0xff0000)
         .setDescription("Try: =bazaar crafts insta <margin/profit>");
-        msg.channel.send(embed);
+        loadingMSG.edit("‫")
+        loadingMSG.edit(embed)
         console.log("Bazaar failed by <@" + msg.author + ">")
         logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
         return 
@@ -424,7 +457,8 @@ function bazaar(msg) {
         .setTitle("Invalid fourth argument!")
         .setColor(0xff0000)
         .setDescription("Try: =bazaar crafts insta <margin/profit>");
-        msg.channel.send(embed);
+        loadingMSG.edit("‫")
+        loadingMSG.edit(embed)
         console.log("Bazaar failed by <@" + msg.author + ">")
         logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
         return 
@@ -479,7 +513,8 @@ function bazaar(msg) {
         embed.addField(itemNames[craftables[i][0]],desc,true)
         
       }
-      msg.channel.send(embed);
+      loadingMSG.edit("‫")
+      loadingMSG.edit(embed)
       console.log("Bazaar finished by <@" + msg.author + ">")
       logger.write(getCurPSTDate() + "Bazaar finished by <@" + msg.author + ">\n")
       return
@@ -488,7 +523,8 @@ function bazaar(msg) {
       .setTitle("Missing third argument!")
       .setColor(0xff0000)
       .setDescription("Try: =bazaar crafts <orders/insta> <margin/profit>");
-      msg.channel.send(embed);
+      loadingMSG.edit("‫")
+      loadingMSG.edit(embed)
       console.log("Bazaar failed by <@" + msg.author + ">")
       logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
       return 
@@ -507,7 +543,8 @@ function bazaar(msg) {
       .setTitle("Missing third argument!")
       .setColor(0xff0000)
       .setDescription("Try: =bazaar info <product>");
-      msg.channel.send(embed);
+      loadingMSG.edit("‫")
+      loadingMSG.edit(embed)
       console.log("Bazaar failed by <@" + msg.author + ">")
       logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
       return
@@ -540,7 +577,8 @@ function bazaar(msg) {
         description += itemNames[suggestions[i]] + "\n"
       }
       embed.setDescription(description);
-      msg.channel.send(embed);
+      loadingMSG.edit("‫")
+      loadingMSG.edit(embed)
       console.log("Bazaar failed by <@" + msg.author + ">")
       logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
       return
@@ -548,7 +586,8 @@ function bazaar(msg) {
       const embed = new MessageEmbed()
       .setTitle("Couldn't find the product " + '"' + query + '"')
       .setColor(0xff0000)
-      msg.channel.send(embed);
+      loadingMSG.edit("‫")
+      loadingMSG.edit(embed)
       console.log("Bazaar failed by <@" + msg.author + ">")
       logger.write(getCurPSTDate() + "Bazaar failed by <@" + msg.author + ">\n")
       return
@@ -728,7 +767,7 @@ function bazaar(msg) {
   logger.write(getCurPSTDate() + "Bazaar finished by <@" + msg.author + ">\n")
 }
 
-function skills(msg) {
+async function skills(msg) {
   var hasFailed = false;
   console.log("Skills called by <@" + msg.author + ">")
   logger.write(getCurPSTDate() + "Skills called by <@" + msg.author + ">" + '\n')
@@ -746,7 +785,7 @@ function skills(msg) {
           return
       }
       if (args.length == 2) {
-          
+          var loadingMSG = await msg.channel.send("Loading...")
           var request = new XMLHttpRequest();
           request.open("GET", "https://sky.lea.moe/api/" + args[1] + "/profiles?html", false);
           
@@ -755,8 +794,9 @@ function skills(msg) {
                 const embed = new MessageEmbed()
                 .setTitle("Invalid Username!")
                 .setColor(0xff0000)
-                msg.channel.send(embed);
                 hasFailed = true
+                loadingMSG.edit("‫")
+                loadingMSG.edit(embed)
                 return
             }
             var d = request.responseText.split("<tr>")
@@ -775,15 +815,18 @@ function skills(msg) {
             logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
             return
           }
+
+          loadingMSG.edit("Loading... " + Math.round((1/(1+profiles.length))*100) +  "%")
           
-          var uuid = getUUID(args[1])
+          var uuid = await getUUID(args[1])
           if (uuid == "") {
             const embed = new MessageEmbed()
-            .setTitle("An error occured!")
+            .setTitle("An error occured! (SU.1)")
             .setColor(0xff0000)
             .setDescription("Something went wrong with the Mojang API! Try again later!");
-            msg.channel.send(embed);
             hasFailed = true
+            loadingMSG.edit("‫")
+            loadingMSG.edit(embed)
           }
 
           if (hasFailed){
@@ -791,29 +834,24 @@ function skills(msg) {
             logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
             return
           }
-
           for (i = 0; i < profiles.length; i++) {
-            request = new XMLHttpRequest();
-            request.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + profiles[i][0], false);
-            request.responseType = 'json';
-            request.onload = function() {
-              try{
-                profiles[i][2] = JSON.parse(request.responseText)["profile"]["members"][uuid]["last_save"];
-              } catch (err) {
-                console.log(err)
-                console.log(request.responseText)
-                logger.write(getCurPSTDate() + "Error parsing JSON!\n")
-                const embed = new MessageEmbed()
-                .setTitle("An error occured!")
-                .setColor(0xff0000)
-                .setDescription("Something went wrong with the Hypixel API! Try again later!");
-                msg.channel.send(embed);
-                hasFailed = true
-                return
-              }
-            };
-            request.send(null);
+            try{
+              var json = await getJSON("https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + profiles[i][0])
+              profiles[i][2] = json["profile"]["members"][uuid]["last_save"];
+            } catch (err) {
+              console.log(err)
+              logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+              const embed = new MessageEmbed()
+              .setTitle("An error occured! (S2.1)")
+              .setColor(0xff0000)
+              .setDescription("Something went wrong with the Hypixel API! Try again later!");
+              hasFailed = true
+              loadingMSG.edit("‫")
+              loadingMSG.edit(embed)
+            }
+            loadingMSG.edit("Loading... " + Math.round(((1+i)/(1+profiles.length))*100) + "%")
           }
+
           if (hasFailed){
             console.log("Skills failed by <@" + msg.author + ">")
             logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
@@ -832,10 +870,14 @@ function skills(msg) {
           .setTitle("Missing profile argument!")
           .setColor(0xff0000)
           .setDescription(desc);
-          msg.channel.send(embed);
+          loadingMSG.edit("‫")
+          loadingMSG.edit(embed)
+          console.log("Skills finished by <@" + msg.author + ">")
+          logger.write(getCurPSTDate() + "Skills finished by <@" + msg.author + ">\n")
           return
       }
   }
+  var loadingMSG = await msg.channel.send("Loading...")
   var profileID = ""
   var profiles = []
   var request = new XMLHttpRequest();
@@ -845,38 +887,42 @@ function skills(msg) {
         const embed = new MessageEmbed()
         .setTitle("Invalid Username!")
         .setColor(0xff0000)
-        msg.channel.send(embed);
         hasFailed = true
+        loadingMSG.edit("‫")
+        loadingMSG.edit(embed)
         return
+    }
+    
+    var d = request.responseText.split("<tr>")
+
+    for (i = 0; i < d.length; i++) { 
+      d[i] = d[i].split("</td><td>")
+      if (d[i][1] != undefined) {
+        var newItem = [d[i][0].substring(4), d[i][1],0]
+        profiles.push(newItem)
+        if (d[i][1] == args[2].charAt(0).toUpperCase() + args[2].slice(1)) {
+            profileID = d[i][0].substring(4)
+        }
+      }
+    }
   }
+  request.send(null);
   if (hasFailed){
     console.log("Skills finished by <@" + msg.author + ">")
     logger.write(getCurPSTDate() + "Skills finished by <@" + msg.author + ">\n")
     return
   }
-  var d = request.responseText.split("<tr>")
-
-  for (i = 0; i < d.length; i++) { 
-      d[i] = d[i].split("</td><td>")
-      if (d[i][1] != undefined) {
-          var newItem = [d[i][0].substring(4), d[i][1],0]
-          profiles.push(newItem)
-          if (d[i][1] == args[2].charAt(0).toUpperCase() + args[2].slice(1)) {
-              profileID = d[i][0].substring(4)
-          }
-      }
-    }
-  }
-  request.send(null);
+  loadingMSG.edit("‫Loading... 33%")
 
   var uuid = getUUID(args[1])
   if (uuid == "") {
     const embed = new MessageEmbed()
-    .setTitle("An error occured!")
+    .setTitle("An error occured with the Mojang API")
     .setColor(0xff0000)
     .setDescription("Try again later!");
-    msg.channel.send(embed);
     hasFailed = true
+    loadingMSG.edit("‫")
+    loadingMSG.edit(embed)
     return
   }
   if (hasFailed){
@@ -885,162 +931,168 @@ function skills(msg) {
     return
   }
   
+  
   if (profileID == ""){
-      for (i = 0; i < profiles.length; i++) {
-        request = new XMLHttpRequest();
-        request.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + profiles[i][0], false);
-        request.responseType = 'json';
-        request.onload = function() {
-          try{
-            profiles[i][2] = JSON.parse(request.responseText)["profile"]["members"][uuid]["last_save"];
-          } catch (err) {
-            console.log(err)
-            console.log(request.responseText)
-            logger.write(getCurPSTDate() + "Error parsing JSON!\n")
-            const embed = new MessageEmbed()
-            .setTitle("An error occured!")
-            .setColor(0xff0000)
-            .setDescription("Something went wrong with the Hypixel API! Try again later!");
-            msg.channel.send(embed);
-            hasFailed = true
-            return
-          }
-        };
-        if (hasFailed){
-          console.log("Skills failed by <@" + msg.author + ">")
-          logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
-          return
-        }
-        request.send(null);
+    for (i = 0; i < profiles.length; i++) {
+      try{
+        var json = await getJSON("https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + profiles[i][0])
+        profiles[i][2] = json["profile"]["members"][uuid]["last_save"];
+      } catch (err) {
+        console.log(err)
+        logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+        const embed = new MessageEmbed()
+        .setTitle("An error occured! (S3.1)")
+        .setColor(0xff0000)
+        .setDescription("Something went wrong with the Hypixel API! Try again later!");
+        hasFailed = true
+        loadingMSG.edit("‫")
+        loadingMSG.edit(embed)
+        return
       }
-      
-      profiles.sort(function(a,b){
-          return b[2] - a[2];
-      });
-      var desc = "Try: =skills " + args[1] + " <profile>\n\n"
-      desc = desc + "**" + args[1] + "'s profiles:**\n"
-      desc = desc + "*Sorted by last played*\n"
-      for (i=0; i < profiles.length; i++) {
-          desc += profiles[i][1] + "\n"
+      if (hasFailed){
+        console.log("Skills failed by <@" + msg.author + ">")
+        logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
+        return
       }
-      const embed = new MessageEmbed()
-      .setTitle("Profile doesn't exist!")
-      .setColor(0xff0000)
-      .setDescription(desc);
-      msg.channel.send(embed);
-      return
-  }
-                
-  request = new XMLHttpRequest();
-  request.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + profileID, false);
-  request.responseType = 'json';
-  var data = {};
-  request.onload = function() {
-    const embed = new MessageEmbed()
-    .setTitle(args[1] + "'s skills:")
-    .setColor(0x00ffff);
-    var member;
-    try{
-      member = JSON.parse(request.responseText)["profile"]["members"][uuid];
-    } catch (err) {
-      console.log(err);
-      console.log(request.responseText)
-      logger.write(getCurPSTDate() + "Error parsing JSON!\n")
-      return
-      hasFailed = true;
+      request.send(null);
     }
-    var skillValues = [0,50,175,375,675,1175,1925,2925,4425,6425,9925,14925,22425,32425,47425,67425,97425,147425,222425,322425,522425,822425,1222425,1722425,2322425,3022425,3822425,4722425,4722425,6822425,8022425,9322425,10722425,12222425,13822425,15522425,17322425,19222425,21222425,23322425,25522425,27822425,30222425,32722425,35322425,38072425,40972425,44072425,47472425,51172425,55172425,Infinity]
-    var rune = [0,50,150,275,435,635,885,1200,1600,2100,2725,3510,4510,5760,7325,9325,11825,14950,18950,23950,30200,38050,47850,60100,75400,94450,Infinity]
-    var sdesc = ""
-    var count = 0;
-    var avg = 0;
-    var avgCount = 0;
-    for (var k in member) {
-        if (k.startsWith("experience_skill_")) {
-            count ++;
-            if (k == "experience_skill_runecrafting"){
-                sdesc = ""
-                var xp = member[k]
-                var level = 0
-                while (rune[level] < xp) {
-                    level = level + 1;
-                }
-                level = level - 1
-                sdesc += "Level: " + level + "\n"
-                sdesc += "Progress: " + toKM(Math.round(xp-rune[level])).toString() + "/" + toKM(rune[level+1]-rune[level]).toString() +" (" + (Math.round((xp-rune[level])/(rune[level+1]-rune[level])*100000)/1000) + "%)\n"
-                if (Math.round(xp/94450*10000)/100 > 100){
-                    sdesc += "MAX LEVEL ACHIEVED\n"
-                }else{
-                    sdesc += Math.round(xp/94450*10000)/100 + "% to level 25\n"
-                }
-                embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
-            }else{
-                sdesc = ""
-                var xp = member[k]
-                var level = 0
-                while (skillValues[level] < xp) {
-                    level = level + 1;
-                }
-                level = level - 1
-                sdesc += "Level: " + level + "\n"
-                sdesc += "Progress: " + toKM(Math.round(xp-skillValues[level])).toString() + "/" + toKM(skillValues[level+1]-skillValues[level]).toString() +" (" + (Math.round((xp-skillValues[level])/(skillValues[level+1]-skillValues[level])*100000)/1000) + "%)\n"
-                if (Math.round(xp/55172425*10000)/100 > 100){
-                    sdesc += "MAX LEVEL ACHIEVED\n"
-                }else{
-                    sdesc += Math.round(xp/55172425*10000)/100 + "% to level 50\n"
-                }
-                embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
-                if (k != "experience_skill_runecrafting" && k != "experience_skill_carpentry"){
-                  avg += level + (Math.round((xp-skillValues[level])/(skillValues[level+1]-skillValues[level])*1000)/1000)
-                  avgCount++;
-                }
-            }
-        }
-    }                
-    if (count == 0) {
-      request = new XMLHttpRequest();
-      request.open("GET", "https://api.hypixel.net/player?key=" + process.env.HYPIXEL_API_KEY + "&uuid=" + uuid, false);
-      request.responseType = 'json';
-      var desc = 
-      request.onload = function(){
-        try{
-          var json = JSON.parse(request.responseText)
-          var skills = [["Mining", "skyblock_excavator"],["Combat","skyblock_combat"],["Foraging","skyblock_gatherer"],["Fishing","skyblock_angler"],["Farming","skyblock_harvester"],["Taming","skyblock_domesticator"],["Alchemy","skyblock_concoctor"],["Enchanting","skyblock_augmentation"]]
-          for (var i = 0; i < skills.length; i ++) {
-            if ((json["player"]["achievements"][skills[i][1]]) == null){
-              embed.addField(skills[i][0],"Level 0",true)
-            }else{
-              embed.addField(skills[i][0],"Level " + json["player"]["achievements"][skills[i][1]],true)
-            }
-          }
-          embed.setDescription("This player's Skills API was disabled, so results are less accurate.")
-        } catch (err) {
-          console.log(err);
-          console.log(request.responseText)
-          logger.write(getCurPSTDate() + "Error parsing JSON!\n")
-          return
-          hasFailed = true;
-        }
-      }
-      request.send(null)
-    }else{
-      embed.setTitle(args[1] + "'s skills: (Average Skill Level: " + Math.round((avg/avgCount)*100)/100 + ")")
-    }  
-    msg.channel.send(embed);
-    return
-  } 
-  if (hasFailed){
-    console.log("Skills failed by <@" + msg.author + ">")
-    logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
+    
+    profiles.sort(function(a,b){
+        return b[2] - a[2];
+    });
+    var desc = "Try: =skills " + args[1] + " <profile>\n\n"
+    desc = desc + "**" + args[1] + "'s profiles:**\n"
+    desc = desc + "*Sorted by last played*\n"
+    for (i=0; i < profiles.length; i++) {
+        desc += profiles[i][1] + "\n"
+    }
     const embed = new MessageEmbed()
-    .setTitle("An error occured!")
+    .setTitle("Profile doesn't exist!")
+    .setColor(0xff0000)
+    .setDescription(desc); 
+    loadingMSG.edit("‫")
+    loadingMSG.edit(embed)
+    return
+  }
+
+  const embed = new MessageEmbed()
+  .setTitle(args[1] + "'s skills:")
+  .setColor(0x00ffff);
+  var member;
+  var data = {};         
+  try {
+    var json = await getJSON("https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + profileID)
+    member = json["profile"]["members"][uuid];
+  } catch (err) {
+    console.log(err);
+    console.log(json)
+    logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+    hasFailed = true;
+    const embed = new MessageEmbed()
+    .setTitle("An error occured! (S3.2)")
     .setColor(0xff0000)
     .setDescription("Something went wrong with the Hypixel API! Try again later.");
-    msg.channel.send(embed);
-    return
+    loadingMSG.edit("‫")
+    loadingMSG.edit(embed)
     return
   }
-  request.send(null);
+
+  loadingMSG.edit("‫Loading... 66%")
+
+  //PARSE API STAGE 1
+  var skillValues = [0,50,175,375,675,1175,1925,2925,4425,6425,9925,14925,22425,32425,47425,67425,97425,147425,222425,322425,522425,822425,1222425,1722425,2322425,3022425,3822425,4722425,4722425,6822425,8022425,9322425,10722425,12222425,13822425,15522425,17322425,19222425,21222425,23322425,25522425,27822425,30222425,32722425,35322425,38072425,40972425,44072425,47472425,51172425,55172425,Infinity]
+  var rune = [0,50,150,275,435,635,885,1200,1600,2100,2725,3510,4510,5760,7325,9325,11825,14950,18950,23950,30200,38050,47850,60100,75400,94450,Infinity]
+  var sdesc = ""
+  var count = 0;
+  var avg = 0;
+  var avgCount = 0;
+  for (var k in member) {
+    if (k.startsWith("experience_skill_")) {
+      count++;
+      if (k == "experience_skill_runecrafting"){
+        sdesc = ""
+        var xp = member[k]
+        var level = 0
+        while (rune[level] < xp) {
+            level = level + 1;
+        }
+        level = level - 1
+        sdesc += "Level: " + level + "\n"
+        sdesc += "Progress: " + toKM(Math.round(xp-rune[level])).toString() + "/" + toKM(rune[level+1]-rune[level]).toString() +" (" + (Math.round((xp-rune[level])/(rune[level+1]-rune[level])*100000)/1000) + "%)\n"
+        if (Math.round(xp/94450*10000)/100 > 100){
+            sdesc += "MAX LEVEL ACHIEVED\n"
+        }else{
+            sdesc += Math.round(xp/94450*10000)/100 + "% to level 25\n"
+        }
+        embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
+      }else{
+        sdesc = ""
+        var xp = member[k]
+        var level = 0
+        while (skillValues[level] < xp) {
+            level = level + 1;
+        }
+        level = level - 1
+        sdesc += "Level: " + level + "\n"
+        sdesc += "Progress: " + toKM(Math.round(xp-skillValues[level])).toString() + "/" + toKM(skillValues[level+1]-skillValues[level]).toString() +" (" + (Math.round((xp-skillValues[level])/(skillValues[level+1]-skillValues[level])*100000)/1000) + "%)\n"
+        if (Math.round(xp/55172425*10000)/100 > 100){
+            sdesc += "MAX LEVEL ACHIEVED\n"
+        }else{
+            sdesc += Math.round(xp/55172425*10000)/100 + "% to level 50\n"
+        }
+        embed.addField(k.substring(17).charAt(0).toUpperCase() + k.substring(17).slice(1),sdesc,true)
+        if (k != "experience_skill_runecrafting" && k != "experience_skill_carpentry"){
+          avg += level + (Math.round((xp-skillValues[level])/(skillValues[level+1]-skillValues[level])*1000)/1000)
+          avgCount++;
+        }
+      }
+    }
+  }
+
+  //API DISABLED
+  if (count == 0) {
+    try{
+      var jsonTwo = await getJSON("https://api.hypixel.net/player?key=" + process.env.HYPIXEL_API_KEY + "&uuid=" + uuid) 
+      var skills = [["Mining", "skyblock_excavator"],["Combat","skyblock_combat"],["Foraging","skyblock_gatherer"],["Fishing","skyblock_angler"],["Farming","skyblock_harvester"],["Taming","skyblock_domesticator"],["Alchemy","skyblock_concoctor"],["Enchanting","skyblock_augmentation"]]
+      for (var i = 0; i < skills.length; i ++) {
+        if ((jsonTwo["player"]["achievements"][skills[i][1]]) == null){
+          embed.addField(skills[i][0],"Level 0",true)
+        }else{
+          embed.addField(skills[i][0],"Level " + jsonTwo["player"]["achievements"][skills[i][1]],true)
+        }
+      }
+      embed.setDescription("This player's Skills API was disabled, so results are less accurate.")
+    } catch (err) {
+      console.log(jsonTwo)
+      console.log(err);
+      logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+      console.log("Skills failed by <@" + msg.author + ">")
+      logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
+      const embed = new MessageEmbed()
+      .setTitle("An error occured! (S3.3)")
+      .setColor(0xff0000)
+      .setDescription("Something went wrong with the Hypixel API! Try again later.");
+      hasFailed = true;
+      loadingMSG.edit("‫")
+      loadingMSG.edit(embed)
+      return
+    }
+  }else{
+    embed.setTitle(args[1] + "'s skills: (Average Skill Level: " + Math.round((avg/avgCount)*100)/100 + ")")
+  }  
+  loadingMSG.edit("‫")
+  loadingMSG.edit(embed)
+
+  // if (hasFailed){
+  //   console.log("Skills failed by <@" + msg.author + ">")
+  //   logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
+  //   const embed = new MessageEmbed()
+  //   .setTitle("An error occured!")
+  //   .setColor(0xff0000)
+  //   .setDescription("Something went wrong with the Hypixel API! Try again later.");
+  //   msg.channel.send(embed);
+  //   return
+  // }
   console.log("Skills finished by <@" + msg.author + ">")
   logger.write(getCurPSTDate() + "Skills finished by <@" + msg.author + ">\n")
 }
@@ -1059,12 +1111,13 @@ function help(msg) {
     logger.write(getCurPSTDate() + "Help finished by <@" + msg.author + ">\n")
 }
 
-function profiles(msg) {
+async function profiles(msg) {
     console.log("Profiles called by <@" + msg.author + ">")
     logger.write(getCurPSTDate() + "Profiles called by <@" + msg.author + ">\n")
     var profiles = [];
     var hasFailed = false;
     var args = msg.content.split(" ");
+    var loadingMSG = await msg.channel.send("Loading...")
     var request = new XMLHttpRequest();
     request.open("GET", "https://sky.lea.moe/api/" + args[1] + "/profiles?html", false);
     
@@ -1073,7 +1126,9 @@ function profiles(msg) {
           const embed = new MessageEmbed()
           .setTitle("Invalid Username!")
           .setColor(0xff0000)
-          msg.channel.send(embed);
+          loadingMSG.edit("‫")
+          loadingMSG.edit(embed)
+          //msg.channel.send(embed);
           hasFailed = true
           return
       }
@@ -1089,53 +1144,50 @@ function profiles(msg) {
     request.send(null);
 
     if (hasFailed){
-      console.log("Skills finished by <@" + msg.author + ">")
-      logger.write(getCurPSTDate() + "Skills finished by <@" + msg.author + ">\n")
+      console.log("Profiles finished by <@" + msg.author + ">")
+      logger.write(getCurPSTDate() + "Profiles finished by <@" + msg.author + ">\n")
       return
     }
+
+    loadingMSG.edit("Loading... " + Math.round((1/(1+profiles.length))*100) +  "%")
+
     
-    var uuid = getUUID(args[1])
+    
+    var uuid = await getUUID(args[1])
     if (uuid == "") {
       const embed = new MessageEmbed()
-      .setTitle("An error occured!")
+      .setTitle("An error occured with the Mojang API! (PU.1)")
       .setColor(0xff0000)
       .setDescription("Try again later!");
-      msg.channel.send(embed);
+      loadingMSG.edit("‫")
+      loadingMSG.edit(embed)
       hasFailed = true
     }
 
     if (hasFailed){
-      console.log("Skills failed by <@" + msg.author + ">")
-      logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
+      console.log("Profiles failed by <@" + msg.author + ">")
+      logger.write(getCurPSTDate() + "Profiles failed by <@" + msg.author + ">\n")
       return
     }
-
     for (i = 0; i < profiles.length; i++) {
-      request = new XMLHttpRequest();
-      request.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + profiles[i][0], false);
-      request.responseType = 'json';
-      request.onload = function() {
-        try{
-          profiles[i][2] = JSON.parse(request.responseText)["profile"]["members"][uuid]["last_save"];
-        } catch (err) {
-          console.log(err)
-          console.log(request.responseText)
-          logger.write(getCurPSTDate() + "Error parsing JSON!\n")
-          const embed = new MessageEmbed()
-          .setTitle("An error occured!")
-          .setColor(0xff0000)
-          .setDescription("Try again later!");
-          msg.channel.send(embed);
-          hasFailed = true
-          return
-        }
-      };
-      request.send(null);
-    }
-    if (hasFailed){
-      console.log("Skills failed by <@" + msg.author + ">")
-      logger.write(getCurPSTDate() + "Skills failed by <@" + msg.author + ">\n")
-      return
+      try{
+        var json = await getJSON("https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + profiles[i][0])
+        profiles[i][2] = json["profile"]["members"][uuid]["last_save"];
+      } catch (err) {
+        logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+        console.log(err)
+        console.log(json)
+        const embed = new MessageEmbed()
+        .setTitle("An error occured! (P.1)")
+        .setColor(0xff0000)
+        .setDescription("Try again later!");
+        loadingMSG.edit("‫")
+        loadingMSG.edit(embed)
+        console.log("Profiles failed by <@" + msg.author + ">")
+        logger.write(getCurPSTDate() + "Profiles failed by <@" + msg.author + ">\n")
+        return
+      }
+      loadingMSG.edit("Loading... " + Math.round(((1+i)/(1+profiles.length))*100) +  "%")
     }
     profiles.sort(function(a,b){
         return b[2] - a[2];
@@ -1149,7 +1201,8 @@ function profiles(msg) {
     .setTitle(args[1] + "'s profiles")
     .setColor(0x00ffff)
     .setDescription(desc);
-    msg.channel.send(embed);
+    loadingMSG.edit("‫")
+    loadingMSG.edit(embed)
     console.log("Profiles finished by <@" + msg.author + ">")
     logger.write(getCurPSTDate() + "Profiles finished by <@" + msg.author + ">\n")
 }
@@ -1169,7 +1222,7 @@ function findUpdate(){
   console.log("Checking for an update...")
   logger.write(getCurPSTDate() + "Checking for an update...\n")
   var rt = new XMLHttpRequest();
-  rt.open("GET", "https://api.hypixel.net/skyblock/news?key=" + process.env.HYPIXEL_API_KEY, false);
+  rt.open("GET", "https://api.hypixel.net/skyblock/news?key=" + process.env.HYPIXEL_API_KEY, true);
   rt.responseType = 'json';
   rt.onload = function() {
       var status = rt.status;
@@ -1204,87 +1257,103 @@ function findUpdate(){
   rt.send(null);
 }
 
+function processKeys(){
+  if (finishedProfiles == kp.length){
+  var tg = ""
+  const embed = new MessageEmbed()
+  .setTitle("Something Changed!")
+  .setColor(0x00ff00)
+  var out = []
+  fs.readFile(__dirname + '/newFields.txt', {encoding: 'utf-8'}, function(err,data){
+      if (!err) {
+          kj = data.split("\n")
+          dif = arr_diff(keys, kj)
+          dif2 = arr_diff(kj, keys)
+          console.log(dif.length)
+          console.log(dif2.length)
+
+          if (dif.length != 0 || dif2.length != 0) {
+              console.log("Something was changed: +" + dif.length + ", -" + dif2.length)
+              logger.write(getCurPSTDate() + "Something was changed: +" + dif.length + ", -" + dif2.length + "\n")
+              fs.writeFile('newFields.txt', keys.join("\n"), function (err) {
+                  if (err) throw err;
+                  console.log('Saved to file!');
+                  logger.write(getCurPSTDate() + "Saved to file!\n")
+                  });
+              if (dif.length != 0) {
+                  tg += "**Added:**\n"
+                  for (var i = 0; i < 25 && i < dif.length; i ++){
+                      tg += dif[i] + "\n"
+                  }
+                  if (dif.length > 25) {
+                      tg += "_and " + (dif.length - 25) + " more_\n"
+                  }
+              }
+              if (dif2.length != 0) {
+                  tg += "\n**Removed:**\n"
+                  for (var i = 0; i < 25 && i < dif2.length; i ++){
+                      tg += dif2[i] + "\n"
+                  }
+                  if (dif2.length > 25) {
+                      tg += "_and " + (dif2.length - 25) + " more_\n"
+                  }
+              }
+              embed.setDescription(tg);
+              client.channels.cache.get('729856965471109130').send(embed);
+              kj = keys.slice();
+          }
+          
+      } else {
+          console.log(err);
+          logger.write(getCurPSTDate() + "Error reading newFields.txt while checking keys!\n")
+      }
+  });
+  }
+}
+
 function findKeys(){
+  
+    finishedProfiles = 0
     console.log("Checking API keys...")
     logger.write(getCurPSTDate() + "Checking API keys...\n")
     kj = []
     var it = 0
+    var failed = false
     for (it = 0; it < kp.length; it ++) {
+        if (failed == true) {
+          break;
+        }
         console.log("Checking Profile #" + it)
         logger.write(getCurPSTDate() + "Checking Profile #" + it + "\n")
         var rt = new XMLHttpRequest();
-        rt.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + kp[it][0], false);
+        rt.open("GET", "https://api.hypixel.net/skyblock/profile?key=" + process.env.HYPIXEL_API_KEY + "&profile=" + kp[it][0], true);
         rt.responseType = 'json';
         var data = {};
         rt.onload = function() {
+          if (rt.readyState == 4){
             var status = rt.status;
+            console.log("status: " + rt.status)
             if (status === 200) {
-                
-                
-                try{
-                  json = JSON.parse(rt.responseText);
-                  iterate(json, "")
-                } catch (err) {
-                  console.log(err)
-                  console.log(request.responseText)
-                  logger.write(getCurPSTDate() + "Error parsing JSON!\n")
-                  return
-                }
+              try{
+                json = JSON.parse(rt.responseText);
+
+                iterate(json, "")
+                finishedProfiles += 1
+                console.log("P: " + finishedProfiles + "/" + kp.length)
+                processKeys()
+              } catch (err) {
+                console.log(err)
+
+                logger.write(getCurPSTDate() + "Error parsing JSON!\n")
+                return
+              }
             } else {
-                
+              failed = true;
             }
+          }
         };
         rt.send(null);
     }
-    var tg = ""
-    const embed = new MessageEmbed()
-    .setTitle("Something Changed!")
-    .setColor(0x00ff00)
-    var out = []
-    fs.readFile(__dirname + '/newFields.txt', {encoding: 'utf-8'}, function(err,data){
-        if (!err) {
-            kj = data.split("\n")
-            dif = arr_diff(keys, kj)
-            dif2 = arr_diff(kj, keys)
-            console.log(dif.length)
-            console.log(dif2.length)
-
-            if (dif.length != 0 || dif2.length != 0) {
-                console.log("Something was changed: +" + dif.length + ", -" + dif2.length)
-                logger.write(getCurPSTDate() + "Something was changed: +" + dif.length + ", -" + dif2.length + "\n")
-                fs.writeFile('newFields.txt', keys.join("\n"), function (err) {
-                    if (err) throw err;
-                    console.log('Saved to file!');
-                    logger.write(getCurPSTDate() + "Saved to file!\n")
-                    });
-                if (dif.length != 0) {
-                    tg += "**Added:**\n"
-                    for (var i = 0; i < 25 && i < dif.length; i ++){
-                        tg += dif[i] + "\n"
-                    }
-                    if (dif.length > 25) {
-                        tg += "_and " + (dif.length - 25) + " more_\n"
-                    }
-                }
-                if (dif2.length != 0) {
-                    tg += "\n**Removed:**\n"
-                    for (var i = 0; i < 25 && i < dif2.length; i ++){
-                        tg += dif2[i] + "\n"
-                    }
-                    if (dif2.length > 25) {
-                        tg += "_and " + (dif2.length - 25) + " more_\n"
-                    }
-                }
-                embed.setDescription(tg);
-                client.channels.cache.get('729856965471109130').send(embed);
-                kj = keys.slice();
-            }
-            
-        } else {
-            console.log(err);
-            logger.write(getCurPSTDate() + "Error reading newFields.txt while checking keys!\n")
-        }
-    });
 }
 //Clean Directory
 
@@ -1357,21 +1426,26 @@ client.on('ready', () => {
 //Message Receieved
 client.on('message', msg => {
     if (msg.channel.type == "dm" || msg.channel.name == "bot") {
-        if (msg.content.startsWith("=skills ") || (msg.content.startsWith("=s") && msg.content.length == 2) || (msg.content.startsWith("=s "))) {
-            skills(msg)
-        }
-        if (msg.content.startsWith("=bazaar ") || (msg.content.startsWith("=b") && msg.content.length == 2) || (msg.content.startsWith("=b "))) {
-            bazaar(msg)
-        }
-        if (msg.content.startsWith("=help ") || (msg.content.startsWith("=h") && msg.content.length == 2) || (msg.content.startsWith("=h "))) {
-            help(msg)
-        }
-        if (msg.content.startsWith("=profiles ") || (msg.content.startsWith("=p") && msg.content.length == 2) || (msg.content.startsWith("=p "))) {
-            profiles(msg)
-        }
-        if (msg.content.startsWith("=test") || (msg.content.startsWith("=t") && msg.content.length == 2) || (msg.content.startsWith("=t "))) {
-            test(msg)
-        }
+      var cList = msg.content.split(" ")
+      if (cList.length == 0) {
+        return
+      }
+      var cmd = cList[0]
+      if (cmd == "=skills" || cmd == "=s") {
+          skills(msg)
+      }
+      if (cmd == "=bazaar" || cmd == "=b") {
+          bazaar(msg)
+      }
+      if (cmd == "=help" || cmd == "=h") {
+          help(msg)
+      }
+      if (cmd == "=profiles" || cmd == "=p") {
+          profiles(msg)
+      }
+      if (cmd == "=test" || cmd == "=t") {
+          test(msg)
+      }
     } 
 });
 
