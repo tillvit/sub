@@ -14,7 +14,7 @@
     "fastest-levenshtein": "^1.0.9",
     "fetch": "^1.1.0",
     "jquery": "^3.5.1",
-    "moment": "^2.27.0",
+    "moment": "^2.29.2",
     "node-fetch": "^2.6.1",
     "node-levenshtein": "^3.0.7",
     "xmlhttprequest": "^1.8.0"
